@@ -11,6 +11,7 @@ from transforms import get_train_transforms, get_valid_transforms
 from model import BiomassModel, save_checkpoint
 from loss import BiomassLoss
 from metrics import weighted_r2_score_global
+from peft import PeftModel
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -149,6 +150,15 @@ def main(csv_files, save_path):
     print("Total parameters:", sum(p.numel() for p in model.parameters()))
     print("Total trainable parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
 
+    # --- Proposed: Add for detailed PEFT trainable parameters report ---
+    if isinstance(model.backbone, PeftModel):
+        print("\n--- PEFT Trainable Parameters Details ---")
+        model.backbone.print_trainable_parameters()
+        print("-------------------------------------------\n")
+    else:
+        print("\n[WARNING] Model's backbone is not a PeftModel instance.")
+    # -------------------------------------------------------------------
+    
     scheduler_warmup = LinearLR(optimizer, start_factor=0.01, end_factor=1.0, total_iters=WARMUP*len(train_loader))
     scheduler_plateau = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5)
 
