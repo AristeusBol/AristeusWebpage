@@ -81,8 +81,6 @@ def main():
                 models.append(model)
                 print(f"Loaded {w_path}")
             except Exception as e:
-                print(f"Loaded {w_path}")
-            except Exception as e:
                 print(f"Failed to load {w_path}: {e}")
 
     if not models:
