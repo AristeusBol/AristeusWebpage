@@ -12,15 +12,12 @@ class BiomassDataset(Dataset):
         if root is not None:
             self.root = pathlib.Path(root)
         else:
-            # Robust detection: check if images are in current dir or parent dir
-            # based on the first image path in the dataframe
             sample_path = df['id'].iloc[0]
             if pathlib.Path(sample_path).exists():
                 self.root = pathlib.Path(".")
             elif (pathlib.Path("..") / sample_path).exists():
                 self.root = pathlib.Path("..")
             else:
-                # Fallback to default parent if nothing found
                 self.root = pathlib.Path("..")
                 
         self.df = df
@@ -36,7 +33,6 @@ class BiomassDataset(Dataset):
         path = self.root / self.paths[idx]
         img = cv2.imread(str(path), -1)
         if img is None:
-            # Fallback if image not found in parent, try current
             img = cv2.imread(self.paths[idx], -1)
             
         if img is None:
@@ -45,7 +41,8 @@ class BiomassDataset(Dataset):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         h, w, c = img.shape
         half_w = w // 2
-        new0 = self.transform(image=img[:, :half_w])['image']
-        new1 = self.transform(image=img[:, half_w:])['image']
+        transformed = self.transform(image=img[:, :half_w], image_1=img[:, half_w:])
+        new0 = transformed['image']
+        new1 = transformed['image_1']
         label = self.labels[idx] 
         return new0, new1, label
