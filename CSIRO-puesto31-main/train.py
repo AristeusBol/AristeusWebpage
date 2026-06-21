@@ -1,6 +1,7 @@
-import os, numpy as np, pandas as pd
+import os, numpy as np, pandas as pd, csv, logging
 import tqdm
 import pathlib
+from utils.log_setup import setup_logging
 
 import torch, torch.optim as optim
 from torch.utils.data import DataLoader
@@ -61,24 +62,25 @@ def get_balance_metric(scores, lambda_penalty=0.1):
     
 def _train(model, train_loader, criterion, optimizer, scheduler, ema, device, epoch, WARMUP):
     model.train()
+    logger = logging.getLogger("biomass")
     all_loss = []
     for idx, b in (pbar := tqdm.tqdm(enumerate(train_loader), total=len(train_loader))):
-        print(f"\n[DEBUG] Batch {idx} started")
+        logger.debug("Batch %d started", idx)
         img0, img1, labels = b
-        print(f"[DEBUG] Batch {idx} data loaded. Shapes: {img0.shape}, {labels.shape}")
+        logger.debug("Batch %d | Shapes: %s %s", idx, img0.shape, labels.shape)
         img0 = img0.to(device)
         img1 = img1.to(device)
         labels = labels.to(device)
-        print(f"[DEBUG] Batch {idx} moved to device")
+        logger.debug("Batch %d moved to device", idx)
         with torch.autocast(
             device.type if device.type != 'cpu' else 'cpu', 
             dtype=torch.bfloat16 if device.type != 'cpu' else torch.float32, 
             enabled=device.type != 'cpu'
         ):
-            print(f"[DEBUG] Batch {idx} forward pass starting")
+            logger.debug("Batch %d forward pass starting", idx)
             preds = model(img0, img1)
         
-        print(f"[DEBUG] Batch {idx} forward pass done. Calculating loss.")
+        logger.debug("Batch %d forward done. Calculating loss.", idx)
         loss, loss_full = criterion(preds, labels)
         optimizer.zero_grad()
         loss.backward()
@@ -89,7 +91,7 @@ def _train(model, train_loader, criterion, optimizer, scheduler, ema, device, ep
         all_loss.append([j.detach().cpu().item() for j in loss_full])
         if epoch < WARMUP:
             scheduler.step()
-        print(f"[DEBUG] Batch {idx} completed")
+        logger.debug("Batch %d completed", idx)
     all_loss = np.array(all_loss)
     all_loss = all_loss.mean(0)
     all_loss = [float(round(i, 5)) for i in all_loss]
@@ -129,16 +131,19 @@ def _eval(eval_model, val_loader, device, use_tta=False):
     score_per = [round(float(s), 4) for s in score_per]
     return mae, global_score, score, score_per, balanced_score
 
-def main(csv_files, save_path):
+def main(csv_files, save_path, log_path):
     EPOCHS = 100
     WARMUP = 5
     PATIENCE = 20
     
+    save_path.mkdir(parents=True, exist_ok=True)
+    logger, listener = setup_logging(log_path)
+    
     train_loader, val_loader = load_dataloader(csv_files)
-    print(len(train_loader), len(val_loader))
+    logger.info("Train batches: %d | Val batches: %d", len(train_loader), len(val_loader))
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using device: {device}")
+    logger.info("Using device: %s", device)
     
     # Pass token to model
     token = os.getenv("HF_TOKEN", None)
@@ -146,23 +151,19 @@ def main(csv_files, save_path):
     model = model.to(device)
     optimizer = build_optimizer(model)
     criterion = BiomassLoss(device)
-    ema = ModelEmaV2(model, decay=0.99) # 0.9 for default
-    print("Total parameters:", sum(p.numel() for p in model.parameters()))
-    print("Total trainable parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
+    ema = ModelEmaV2(model, decay=0.99)
 
-    # --- Proposed: Add for detailed PEFT trainable parameters report ---
+    logger.info("Total parameters: %d", sum(p.numel() for p in model.parameters()))
+    logger.info("Total trainable parameters: %d", sum(p.numel() for p in model.parameters() if p.requires_grad))
+
     if isinstance(model.backbone, PeftModel):
-        print("\n--- PEFT Trainable Parameters Details ---")
+        logger.info("--- PEFT Trainable Parameters ---")
         model.backbone.print_trainable_parameters()
-        print("-------------------------------------------\n")
     else:
-        print("\n[WARNING] Model's backbone is not a PeftModel instance.")
-    # -------------------------------------------------------------------
+        logger.warning("Model's backbone is not a PeftModel instance.")
     
     scheduler_warmup = LinearLR(optimizer, start_factor=0.01, end_factor=1.0, total_iters=WARMUP*len(train_loader))
     scheduler_plateau = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5)
-
-    save_path.mkdir(parents=True, exist_ok=True)
     best_score = -np.inf
     best_e = 0
     start_epoch = 0
@@ -170,7 +171,7 @@ def main(csv_files, save_path):
     # Resume logic
     last_ckpt_path = save_path / "last_checkpoint.pth"
     if last_ckpt_path.exists():
-        print(f"[*] Found checkpoint at {last_ckpt_path}. Resuming training...")
+        logger.info("[*] Found checkpoint at %s. Resuming training...", last_ckpt_path)
         checkpoint = torch.load(last_ckpt_path, map_location=device, weights_only=False)
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -180,7 +181,7 @@ def main(csv_files, save_path):
         start_epoch = checkpoint['epoch'] + 1
         best_score = checkpoint['best_score']
         best_e = checkpoint['best_e']
-        print(f"[*] Resumed at epoch {start_epoch} (Best BR2: {best_score:.4f})")
+        logger.info("[*] Resumed at epoch %d (Best BR2: %.4f)", start_epoch, best_score)
         
     for e in range(start_epoch, EPOCHS):
         all_loss = _train(model, train_loader, criterion, optimizer, scheduler_warmup, ema, device, e, WARMUP)
@@ -192,15 +193,43 @@ def main(csv_files, save_path):
             
         lr_backbone = optimizer.param_groups[0]['lr']
         lr_heads = optimizer.param_groups[1]['lr']
-        
-        
-        print(f"Epoch {e+1}/{EPOCHS}")
-        print(f"Train Loss: {all_loss}")
-        print(f"MAE: {mae}")
-        print(f"GR2: {global_score:.4f} | R2: {score:.4f} | BR2: {balanced_score:.4f}")
-        print(f"Per R2: {score_per}")
-        print("LR Backbone: {:.7f} | LR Heads: {:.7f}".format(lr_backbone, lr_heads))
-        
+
+        logger.info("Epoch %d/%d | Loss: %s | MAE: %s | GR2: %.4f | BR2: %.4f",
+                    e+1, EPOCHS, all_loss, mae, global_score, balanced_score)
+        logger.info("Per R2: %s | LR Backbone: %.7f | LR Heads: %.7f",
+                    score_per, lr_backbone, lr_heads)
+
+        # ---- best score tracking & best model checkpoint ----
+        if balanced_score > best_score:
+            best_e = e
+            best_score = balanced_score
+            logger.info("[+] Save best model at epoch %d with BR2: %.4f", e+1, best_score)
+            save_checkpoint(save_path / "best.bin", model)
+            save_checkpoint(save_path / "best_ema.bin", ema.module)
+
+        # ---- CSV logging (no bloqueante, append) ----
+        csv_path = log_path / "metrics.csv"
+        is_new = not csv_path.exists()
+        mejor_str = f"Epoca {best_e+1} (BR2: {best_score:.4f})" if best_score != -np.inf else ""
+        row = {
+            "Epoch": e + 1,
+            "Train_Loss": round(float(np.mean(all_loss)), 5),
+            "Val_MAE": round(float(np.mean(mae)), 5),
+            "BR2": round(float(balanced_score), 4),
+            "GR2": round(float(global_score), 4),
+            "R2_Green": round(float(score_per[0]), 4),
+            "R2_Dead":  round(float(score_per[1]), 4),
+            "R2_Clover": round(float(score_per[2]), 4),
+            "LR_Backbone": lr_backbone,
+            "LR_Heads": lr_heads,
+            "Mejor_Resultado_Hasta_Ahora": mejor_str,
+        }
+        with open(csv_path, "a", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=list(row.keys()))
+            if is_new:
+                writer.writeheader()
+            writer.writerow(row)
+
         # Save last checkpoint for resuming
         torch.save({
             'epoch': e,
@@ -212,26 +241,25 @@ def main(csv_files, save_path):
             'best_score': best_score,
             'best_e': best_e
         }, save_path / "last_checkpoint.pth")
-        
-        if balanced_score > best_score: 
-            best_e = e
-            best_score = balanced_score
-            print(f"[+] Save best model at epoch {e+1} with BR2: {best_score:.4f}")
-            save_checkpoint(save_path / "best.bin", model)
-            save_checkpoint(save_path / "best_ema.bin", ema.module)
             
         if e == EPOCHS - 1 or e - best_e >= PATIENCE:
-            print("Final epoch, saving model...")
+            logger.info("Final epoch, saving model...")
             save_checkpoint(save_path / "final.bin", model )
             save_checkpoint(save_path / "final_ema.bin", ema.module )
+            listener.stop()
             return
+    
+    listener.stop()
     
 if __name__ == "__main__":
     ds_path = pathlib.Path("./datasets/fold_news1")
     ckpt_path = pathlib.Path("./checkpoints/ver0/")
     ckpt_path.mkdir(parents=True, exist_ok=True)
+    logs_master = pathlib.Path("./logs/ver0/")
+    logs_master.mkdir(parents=True, exist_ok=True)
     num_folds = len(os.listdir(ds_path))
     for i in range(num_folds):
         df_path = ds_path / f"fold_{i}.csv"
         save_path = ckpt_path / f"fold_{i}/"
-        main(df_path, save_path)
+        log_path = logs_master / f"fold_{i}/"
+        main(df_path, save_path, log_path)

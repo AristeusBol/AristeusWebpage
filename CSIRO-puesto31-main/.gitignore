@@ -1,6 +1,8 @@
 __pycache__/
 *.pyc
 .venv/
+utils/__init__.py
+logs/
 backbone_weights/
 *.safetensors
 datasets/fold_news1/
