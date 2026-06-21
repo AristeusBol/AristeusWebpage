@@ -3,3 +3,9 @@ __pycache__/
 .venv/
 backbone_weights/
 *.safetensors
+datasets/fold_news1/
+*.csv
+test/
+*.jpg
+train/
+*.jpg

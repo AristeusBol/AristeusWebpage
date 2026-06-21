@@ -128,16 +128,18 @@ class BiomassModel(nn.Module):
         x_cat = torch.cat([x_l, x_r], dim=1)
         return self.heads(x_cat, get_embed)
 
-    def get_all_values(self, total_pred, props):
+#    def get_all_values(self, total_pred, props):
         # Tính toán giá trị thành phần: Total * Proportion
-        green = total_pred * props[:, 0]
-        dead = total_pred * props[:, 1]
-        clover = total_pred * props[:, 2]
-        gdm = green + clover
-        return (
-            green.squeeze(-1),
-            dead.squeeze(-1),
-            clover.squeeze(-1),
-            gdm.squeeze(-1),
-            total_pred.squeeze(-1),
-        )
+#        green = total_pred * props[:, 0]
+#        dead = total_pred * props[:, 1]
+#        clover = total_pred * props[:, 2]
+#        gdm = green + clover
+#        return (
+#            green.squeeze(-1),
+#            dead.squeeze(-1),
+#            clover.squeeze(-1),
+#            gdm.squeeze(-1),
+#            total_pred.squeeze(-1),
+#        )
+
+
