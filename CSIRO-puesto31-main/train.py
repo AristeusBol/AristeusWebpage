@@ -60,10 +60,11 @@ def get_balance_metric(scores, lambda_penalty=0.1):
     combined_metric = mean_score - (lambda_penalty * std_dev)
     return combined_metric
     
-def _train(model, train_loader, criterion, optimizer, scheduler, ema, device, epoch, WARMUP):
+def _train(model, train_loader, criterion, optimizer, scheduler, ema, device, epoch, WARMUP, accumulation_steps=4):
     model.train()
     logger = logging.getLogger("biomass")
     all_loss = []
+    optimizer.zero_grad()
     for idx, b in (pbar := tqdm.tqdm(enumerate(train_loader), total=len(train_loader))):
         logger.debug("Batch %d started", idx)
         img0, img1, labels = b
@@ -82,15 +83,19 @@ def _train(model, train_loader, criterion, optimizer, scheduler, ema, device, ep
         
         logger.debug("Batch %d forward done. Calculating loss.", idx)
         loss, loss_full = criterion(preds, labels)
-        optimizer.zero_grad()
+        loss = loss / accumulation_steps
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-        optimizer.step()
-        ema.update(model)
-        pbar.set_postfix({'loss': loss.item()})
+
+        if (idx + 1) % accumulation_steps == 0 or idx == len(train_loader) - 1:
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            optimizer.step()
+            optimizer.zero_grad()
+            ema.update(model)
+            if epoch < WARMUP:
+                scheduler.step()
+
+        pbar.set_postfix({'loss': loss.item() * accumulation_steps})
         all_loss.append([j.detach().cpu().item() for j in loss_full])
-        if epoch < WARMUP:
-            scheduler.step()
         logger.debug("Batch %d completed", idx)
     all_loss = np.array(all_loss)
     all_loss = all_loss.mean(0)
@@ -162,7 +167,7 @@ def main(csv_files, save_path, log_path):
     else:
         logger.warning("Model's backbone is not a PeftModel instance.")
     
-    scheduler_warmup = LinearLR(optimizer, start_factor=0.01, end_factor=1.0, total_iters=WARMUP*len(train_loader))
+    scheduler_warmup = LinearLR(optimizer, start_factor=0.01, end_factor=1.0, total_iters=WARMUP*(len(train_loader)//4))
     scheduler_plateau = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5)
     best_score = -np.inf
     best_e = 0
