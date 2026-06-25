@@ -50,12 +50,13 @@ class LocalMambaBlock(nn.Module):
 
     def forward(self, x):
         shortcut = x
+        B, N, D = x.shape
         x = self.norm(x)
         g = torch.sigmoid(self.gate(x))
         x = x * g
-        x = x.transpose(1, 2)  # -> (B, D, N)
+        x = x.transpose(1, 2)
         x = self.dwconv(x)
-        x = x.transpose(1, 2)  # -> (B, N, D)
+        x = x.transpose(1, 2)
         x = self.proj(x)
         x = self.drop(x)
         return shortcut + x
