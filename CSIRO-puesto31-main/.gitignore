@@ -1,5 +1,6 @@
 __pycache__/
 *.pyc
+checkpoints/
 .venv/
 utils/__init__.py
 logs/
@@ -11,3 +12,5 @@ test/
 *.jpg
 train/
 *.jpg
+submission.csv
+test_wide.csv

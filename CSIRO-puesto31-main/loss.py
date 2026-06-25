@@ -24,9 +24,10 @@ class BiomassLoss(nn.Module):
        
     def forward(self, outputs, labels):
         green, dead, clover, gdm, total = outputs
-        l_green  = self.loss(green, labels[:, 0])
-        l_dead   = self.loss(dead, labels[:, 1])
-        l_clover = self.loss(clover, labels[:, 2])
+        # Cast predictions and labels to float32 for stable TweedieLoss calculation
+        l_green  = self.loss(green.to(torch.float32), labels[:, 0].to(torch.float32))
+        l_dead   = self.loss(dead.to(torch.float32), labels[:, 1].to(torch.float32))
+        l_clover = self.loss(clover.to(torch.float32), labels[:, 2].to(torch.float32))
         losses = torch.stack([l_green, l_dead, l_clover])
         return (losses * self.weights).sum(), losses
     
