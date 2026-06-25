@@ -113,9 +113,9 @@ def _eval(eval_model, val_loader, device, use_tta=False):
         with torch.no_grad():
             preds = eval_model(img0, img1)
             if use_tta:
-                preds1 = eval_model(torch.flip(img1, [-1]), torch.flip(img0, [-1]))
-                preds2 = eval_model(torch.flip(img1, [-2]), torch.flip(img0, [-2]))
-                preds3 = eval_model(torch.flip(img1, [-2,-1]), torch.flip(img0, [-2,-1]))
+                preds1 = eval_model(torch.flip(img0, [-1]), torch.flip(img1, [-1]))
+                preds2 = eval_model(torch.flip(img0, [-2]), torch.flip(img1, [-2]))
+                preds3 = eval_model(torch.flip(img0, [-2,-1]), torch.flip(img1, [-2,-1]))
                 preds = [
                     (preds[j]*0.4 + preds1[j]*0.2 + preds2[j]*0.2 + preds3[j]*0.2) for j in range(len(preds))
                 ]

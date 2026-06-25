@@ -134,7 +134,7 @@ def main():
                 p1 = model(img0, img1)
                 
                 # Simple TTA: Flip
-                p2 = model(torch.flip(img1, [-1]), torch.flip(img0, [-1]))
+                p2 = model(torch.flip(img0, [-1]), torch.flip(img1, [-1]))
                 
                 # Average TTA
                 # p1 is list of tensors? or tensor?
