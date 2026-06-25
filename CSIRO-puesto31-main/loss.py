@@ -24,9 +24,9 @@ class BiomassLoss(nn.Module):
        
     def forward(self, outputs, labels):
         green, dead, clover, gdm, total = outputs
-        l_green  = self.loss(green.squeeze(), labels[:,0])
-        l_dead   = self.loss(dead.squeeze(), labels[:,1])
-        l_clover = self.loss(clover.squeeze(), labels[:,2])
+        l_green  = self.loss(green, labels[:, 0])
+        l_dead   = self.loss(dead, labels[:, 1])
+        l_clover = self.loss(clover, labels[:, 2])
         losses = torch.stack([l_green, l_dead, l_clover])
-        return (losses * self.weights).sum(), losses.squeeze()
+        return (losses * self.weights).sum(), losses
     
