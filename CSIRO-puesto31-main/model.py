@@ -3,6 +3,7 @@ import torch
 import os
 from transformers import AutoModel
 from peft import get_peft_model, LoraConfig
+from dataset import SCALES
 
 
 def load_lora_backbone(token=None):
@@ -98,8 +99,8 @@ class RegressionHead(nn.Module):
         green = self.head_green_raw(x_pool)
         clover = self.head_clover_raw(x_pool)
         dead = self.head_dead_raw(x_pool)
-        gdm = green + clover
-        total = gdm + dead
+        gdm = (green * SCALES[0] + clover * SCALES[2]) / SCALES[3]
+        total = (green * SCALES[0] + clover * SCALES[2] + dead * SCALES[1]) / SCALES[4]
         return (
             green.squeeze(-1),
             dead.squeeze(-1),
