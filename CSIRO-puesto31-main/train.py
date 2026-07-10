@@ -1,4 +1,4 @@
-import os, numpy as np, pandas as pd, csv, logging
+import os, sys, numpy as np, pandas as pd, csv, logging
 import tqdm
 import pathlib
 from utils.log_setup import setup_logging
@@ -28,8 +28,8 @@ def load_dataloader(csv_files, ds_type="biomass"):
     train_ds = BiomassDataset(train_df, transform=get_train_transforms(IMG_SIZE=(512, 512)))
     val_ds = BiomassDataset(val_df, transform=get_valid_transforms(IMG_SIZE=(512, 512)))
     # Set num_workers=0 for Windows stability
-    train_loader = DataLoader(train_ds, batch_size=1, shuffle=True, num_workers=0, pin_memory=True, drop_last=True)
-    val_loader = DataLoader(val_ds, batch_size=1, shuffle=False, num_workers=0, pin_memory=True, drop_last=False)
+    train_loader = DataLoader(train_ds, batch_size=2, shuffle=True, num_workers=4, pin_memory=True, drop_last=True)
+    val_loader = DataLoader(val_ds, batch_size=2, shuffle=False, num_workers=4, pin_memory=True, drop_last=False)
     return train_loader, val_loader
 
 def build_optimizer(model: BiomassModel):
@@ -73,9 +73,14 @@ def _train(model, train_loader, criterion, optimizer, scheduler, ema, device, ep
         img1 = img1.to(device)
         labels = labels.to(device)
         logger.debug("Batch %d moved to device", idx)
+        # Available precision options for GPU:
+        # - torch.float16:  Works on all GPUs, recommended for T4/older GPUs
+        # - torch.bfloat16: Faster on Ampere+ (RTX 30xx/40xx, A100), NOT supported on T4
+        # - torch.float32:  Full precision, slowest
+        AMP_DTYPE = torch.float16
         with torch.autocast(
             device.type if device.type != 'cpu' else 'cpu', 
-            dtype=torch.bfloat16 if device.type != 'cpu' else torch.float32, 
+            dtype=AMP_DTYPE if device.type != 'cpu' else torch.float32, 
             enabled=device.type != 'cpu'
         ):
             logger.debug("Batch %d forward pass starting", idx)
@@ -129,17 +134,38 @@ def _eval(eval_model, val_loader, device, use_tta=False):
     all_labels = postprocess(all_labels.squeeze(), is_gt=True)
     
     mae = np.mean(np.abs(all_pred - all_labels), axis=0)
+    rmse = np.sqrt(np.mean((all_pred - all_labels) ** 2, axis=0))
+    rmsle = np.sqrt(np.mean((np.log1p(all_pred) - np.log1p(all_labels)) ** 2, axis=0))
+    
+    bins = [0, 5, 15, 30, float('inf')]
+    bin_labels = ["0g", "0_5g", "5_15g", "15_30g", "30+"]
+    target_names = ["Green", "Dead", "Clover"]
+    mae_bucket = {}
+    for i, name in enumerate(target_names):
+        mask_zero = all_labels[:, i] == 0
+        mae_bucket[f"{name}_{bin_labels[0]}"] = float(np.mean(np.abs(all_pred[mask_zero, i] - all_labels[mask_zero, i]))) if mask_zero.sum() > 0 else 0.0
+        for j in range(1, len(bins)):
+            lo, hi = bins[j-1], bins[j]
+            mask = (all_labels[:, i] > lo) & (all_labels[:, i] <= hi)
+            if mask.sum() > 0:
+                mae_bucket[f"{name}_{bin_labels[j]}"] = float(np.mean(np.abs(all_pred[mask, i] - all_labels[mask, i])))
+            else:
+                mae_bucket[f"{name}_{bin_labels[j]}"] = 0.0
+    
     global_score, score, score_per = weighted_r2_score_global(all_labels, all_pred)
     balanced_score = get_balance_metric(score_per[:3])
     
     mae = [float(round(i, 5)) for i in mae]
+    rmse = [float(round(i, 5)) for i in rmse]
+    rmsle = [float(round(i, 5)) for i in rmsle]
     score_per = [round(float(s), 4) for s in score_per]
-    return mae, global_score, score, score_per, balanced_score
+    return mae, rmse, rmsle, mae_bucket, global_score, score, score_per, balanced_score
 
 def main(csv_files, save_path, log_path):
     EPOCHS = 100
     WARMUP = 5
     PATIENCE = 20
+    ACCUMULATION_STEPS = 4
     
     save_path.mkdir(parents=True, exist_ok=True)
     logger, listener = setup_logging(log_path)
@@ -167,7 +193,7 @@ def main(csv_files, save_path, log_path):
     else:
         logger.warning("Model's backbone is not a PeftModel instance.")
     
-    scheduler_warmup = LinearLR(optimizer, start_factor=0.01, end_factor=1.0, total_iters=WARMUP*(len(train_loader)//4))
+    scheduler_warmup = LinearLR(optimizer, start_factor=0.01, end_factor=1.0, total_iters=WARMUP*(len(train_loader)//ACCUMULATION_STEPS))
     scheduler_plateau = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5)
     best_score = -np.inf
     best_e = 0
@@ -188,54 +214,113 @@ def main(csv_files, save_path, log_path):
         best_e = checkpoint['best_e']
         logger.info("[*] Resumed at epoch %d (Best BR2: %.4f)", start_epoch, best_score)
         
-    for e in range(start_epoch, EPOCHS):
-        all_loss = _train(model, train_loader, criterion, optimizer, scheduler_warmup, ema, device, e, WARMUP)
-        
-        mae, global_score, score, score_per, balanced_score = _eval(ema.module, val_loader, device)
-        
-        if e >= WARMUP:
-            scheduler_plateau.step(balanced_score)
+    e = start_epoch - 1
+    try:
+        for e in range(start_epoch, EPOCHS):
+            all_loss = _train(model, train_loader, criterion, optimizer, scheduler_warmup, ema, device, e, WARMUP, ACCUMULATION_STEPS)
             
-        lr_backbone = optimizer.param_groups[0]['lr']
-        lr_heads = optimizer.param_groups[1]['lr']
+            mae, rmse, rmsle, mae_bucket, global_score, score, score_per, balanced_score = _eval(ema.module, val_loader, device)
+            
+            if e >= WARMUP:
+                scheduler_plateau.step(balanced_score)
+                
+            lr_backbone = optimizer.param_groups[0]['lr']
+            lr_heads = optimizer.param_groups[1]['lr']
 
-        logger.info("Epoch %d/%d | Loss: %s | MAE: %s | GR2: %.4f | BR2: %.4f",
-                    e+1, EPOCHS, all_loss, mae, global_score, balanced_score)
-        logger.info("Per R2: %s | LR Backbone: %.7f | LR Heads: %.7f",
-                    score_per, lr_backbone, lr_heads)
+            logger.info("Epoch %d/%d | Loss: %s | BR2: %.4f | GR2: %.4f",
+                        e+1, EPOCHS, all_loss, balanced_score, global_score)
+            logger.info("MAE  - Green: %.4f | Dead: %.4f | Clover: %.4f | GDM: %.4f | Total: %.4f",
+                        mae[0], mae[1], mae[2], mae[3], mae[4])
+            logger.info("RMSE - Green: %.4f | Dead: %.4f | Clover: %.4f | GDM: %.4f | Total: %.4f",
+                        rmse[0], rmse[1], rmse[2], rmse[3], rmse[4])
+            logger.info("RMSLE- Green: %.4f | Dead: %.4f | Clover: %.4f | GDM: %.4f | Total: %.4f",
+                        rmsle[0], rmsle[1], rmsle[2], rmsle[3], rmsle[4])
+            logger.info("MAE Green  - 0g: %.4f | 0-5: %.4f | 5-15: %.4f | 15-30: %.4f | 30+: %.4f",
+                        mae_bucket["Green_0g"], mae_bucket["Green_0_5g"], mae_bucket["Green_5_15g"], mae_bucket["Green_15_30g"], mae_bucket["Green_30+"])
+            logger.info("MAE Dead   - 0g: %.4f | 0-5: %.4f | 5-15: %.4f | 15-30: %.4f | 30+: %.4f",
+                        mae_bucket["Dead_0g"], mae_bucket["Dead_0_5g"], mae_bucket["Dead_5_15g"], mae_bucket["Dead_15_30g"], mae_bucket["Dead_30+"])
+            logger.info("MAE Clover - 0g: %.4f | 0-5: %.4f | 5-15: %.4f | 15-30: %.4f | 30+: %.4f",
+                        mae_bucket["Clover_0g"], mae_bucket["Clover_0_5g"], mae_bucket["Clover_5_15g"], mae_bucket["Clover_15_30g"], mae_bucket["Clover_30+"])
+            logger.info("R2  - Green: %.4f | Dead: %.4f | Clover: %.4f | LR Bk: %.7f | LR Hd: %.7f",
+                        score_per[0], score_per[1], score_per[2], lr_backbone, lr_heads)
 
-        # ---- best score tracking & best model checkpoint ----
-        if balanced_score > best_score:
-            best_e = e
-            best_score = balanced_score
-            logger.info("[+] Save best model at epoch %d with BR2: %.4f", e+1, best_score)
-            save_checkpoint(save_path / "best.bin", model)
-            save_checkpoint(save_path / "best_ema.bin", ema.module)
+            # ---- best score tracking & best model checkpoint ----
+            if balanced_score > best_score:
+                best_e = e
+                best_score = balanced_score
+                logger.info("[+] Save best model at epoch %d with BR2: %.4f", e+1, best_score)
+                save_checkpoint(save_path / "best.bin", model)
+                save_checkpoint(save_path / "best_ema.bin", ema.module)
 
-        # ---- CSV logging (no bloqueante, append) ----
-        csv_path = log_path / "metrics.csv"
-        is_new = not csv_path.exists()
-        mejor_str = f"Epoca {best_e+1} (BR2: {best_score:.4f})" if best_score != -np.inf else ""
-        row = {
-            "Epoch": e + 1,
-            "Train_Loss": round(float(np.mean(all_loss)), 5),
-            "Val_MAE": round(float(np.mean(mae)), 5),
-            "BR2": round(float(balanced_score), 4),
-            "GR2": round(float(global_score), 4),
-            "R2_Green": round(float(score_per[0]), 4),
-            "R2_Dead":  round(float(score_per[1]), 4),
-            "R2_Clover": round(float(score_per[2]), 4),
-            "LR_Backbone": lr_backbone,
-            "LR_Heads": lr_heads,
-            "Mejor_Resultado_Hasta_Ahora": mejor_str,
-        }
-        with open(csv_path, "a", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=list(row.keys()))
-            if is_new:
-                writer.writeheader()
-            writer.writerow(row)
+            # ---- CSV logging (no bloqueante, append) ----
+            csv_path = log_path / "metrics.csv"
+            is_new = not csv_path.exists()
+            mejor_str = f"Epoca {best_e+1} (BR2: {best_score:.4f})" if best_score != -np.inf else ""
+            row = {
+                "Epoch": e + 1,
+                "Train_Loss": round(float(np.mean(all_loss)), 5),
+                "Val_MAE": round(float(np.mean(mae)), 5),
+                "BR2": round(float(balanced_score), 4),
+                "GR2": round(float(global_score), 4),
+                "R2_Green": round(float(score_per[0]), 4),
+                "R2_Dead":  round(float(score_per[1]), 4),
+                "R2_Clover": round(float(score_per[2]), 4),
+                "MAE_Green": round(float(mae[0]), 4),
+                "MAE_Dead": round(float(mae[1]), 4),
+                "MAE_Clover": round(float(mae[2]), 4),
+                "MAE_GDM": round(float(mae[3]), 4),
+                "MAE_Total": round(float(mae[4]), 4),
+                "RMSE_Green": round(float(rmse[0]), 4),
+                "RMSE_Dead": round(float(rmse[1]), 4),
+                "RMSE_Clover": round(float(rmse[2]), 4),
+                "RMSLE_Green": round(float(rmsle[0]), 4),
+                "RMSLE_Dead": round(float(rmsle[1]), 4),
+                "RMSLE_Clover": round(float(rmsle[2]), 4),
+                "MAE_Green_0g": round(mae_bucket["Green_0g"], 4),
+                "MAE_Green_0_5g": round(mae_bucket["Green_0_5g"], 4),
+                "MAE_Green_5_15g": round(mae_bucket["Green_5_15g"], 4),
+                "MAE_Green_15_30g": round(mae_bucket["Green_15_30g"], 4),
+                "MAE_Green_30+": round(mae_bucket["Green_30+"], 4),
+                "MAE_Dead_0g": round(mae_bucket["Dead_0g"], 4),
+                "MAE_Dead_0_5g": round(mae_bucket["Dead_0_5g"], 4),
+                "MAE_Dead_5_15g": round(mae_bucket["Dead_5_15g"], 4),
+                "MAE_Dead_15_30g": round(mae_bucket["Dead_15_30g"], 4),
+                "MAE_Dead_30+": round(mae_bucket["Dead_30+"], 4),
+                "MAE_Clover_0g": round(mae_bucket["Clover_0g"], 4),
+                "MAE_Clover_0_5g": round(mae_bucket["Clover_0_5g"], 4),
+                "MAE_Clover_5_15g": round(mae_bucket["Clover_5_15g"], 4),
+                "MAE_Clover_15_30g": round(mae_bucket["Clover_15_30g"], 4),
+                "MAE_Clover_30+": round(mae_bucket["Clover_30+"], 4),
+                "LR_Backbone": lr_backbone,
+                "LR_Heads": lr_heads,
+                "Mejor_Resultado_Hasta_Ahora": mejor_str,
+            }
+            with open(csv_path, "a", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=list(row.keys()))
+                if is_new:
+                    writer.writeheader()
+                writer.writerow(row)
 
-        # Save last checkpoint for resuming
+            # Save last checkpoint for resuming
+            torch.save({
+                'epoch': e,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'ema_state_dict': ema.module.state_dict(),
+                'scheduler_warmup_state_dict': scheduler_warmup.state_dict(),
+                'scheduler_plateau_state_dict': scheduler_plateau.state_dict(),
+                'best_score': best_score,
+                'best_e': best_e
+            }, save_path / "last_checkpoint.pth")
+                
+            if e == EPOCHS - 1 or e - best_e >= PATIENCE:
+                logger.info("Final epoch, saving model...")
+                save_checkpoint(save_path / "final.bin", model )
+                save_checkpoint(save_path / "final_ema.bin", ema.module )
+                listener.stop()
+                return
+    except KeyboardInterrupt:
+        logger.warning("Interrupción detectada. Guardando checkpoint para reanudar...")
         torch.save({
             'epoch': e,
             'model_state_dict': model.state_dict(),
@@ -246,13 +331,13 @@ def main(csv_files, save_path, log_path):
             'best_score': best_score,
             'best_e': best_e
         }, save_path / "last_checkpoint.pth")
-            
-        if e == EPOCHS - 1 or e - best_e >= PATIENCE:
-            logger.info("Final epoch, saving model...")
-            save_checkpoint(save_path / "final.bin", model )
-            save_checkpoint(save_path / "final_ema.bin", ema.module )
-            listener.stop()
-            return
+        if (save_path / "best.bin").exists():
+            logger.warning("Guardando best models...")
+            save_checkpoint(save_path / "best.bin", model)
+            save_checkpoint(save_path / "best_ema.bin", ema.module)
+        logger.warning("Checkpoint guardado. Saliendo...")
+        listener.stop()
+        sys.exit(0)
     
     listener.stop()
     
