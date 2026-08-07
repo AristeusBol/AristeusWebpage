@@ -1,0 +1,263 @@
+<UserControl x:Class="AristeusUI.Demo.Features.ControlsLibrary.TextView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:controlsLibrary="clr-namespace:AristeusUI.Demo.Features.ControlsLibrary"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:showMeTheXaml="clr-namespace:ShowMeTheXaml;assembly=ShowMeTheXaml.Avalonia"
+             xmlns:aristeus="https://github.com/kikipoulet/AristeusUI"
+             d:DesignHeight="450"
+             d:DesignWidth="800"
+             x:DataType="controlsLibrary:TextViewModel"
+             mc:Ignorable="d">
+
+    <UserControl.Styles>
+        <Style Selector="showMeTheXaml|XamlDisplay &gt; TextBox">
+            <Setter Property="Text" Value="{Binding TextBoxValue}" />
+        </Style>
+        <Style Selector="TextBlock">
+            <Setter Property="Text" Value="{Binding TextBlockValue}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="SelectableTextBlock">
+            <Setter Property="Text" Value="{Binding SelectableTextBlockValue}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <WrapPanel Classes="PageContainer">
+            <aristeus:GlassCard>
+                <aristeus:GroupBox Header="Text Styles">
+                    <StackPanel Spacing="15">
+                        <StackPanel Classes="HeaderContent">
+                            <TextBlock>
+                                AristeusUI defines some basic text classes that you can use in your application.
+                            </TextBlock>
+                            <TextBlock>
+                                The h and color styles can be combined.
+                            </TextBlock>
+                        </StackPanel>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextHyperlink">
+                            <TextBlock xml:space="preserve">Text With A <HyperlinkButton Command="{Binding HyperlinkClickedCommand}"
+                                                 Content="Hyperlink"
+                                                 IsVisited="{Binding HyperlinkVisited}" /> Inside.</TextBlock>
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextBlock1">
+                            <TextBlock Classes="h1" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextBlock2">
+                            <TextBlock Classes="h2" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextBlock3">
+                            <TextBlock Classes="h3" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextBlock4">
+                            <TextBlock Classes="h4" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextBlock5">
+                            <TextBlock Classes="h5" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextBlock6">
+                            <TextBlock Classes="Caption" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextBlock7">
+                            <TextBlock Classes="Primary" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextBlock8">
+                            <TextBlock Classes="Accent" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextBlock9">
+                            <TextBlock Classes="Success" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextBlock10">
+                            <TextBlock Classes="Information" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextBlock11">
+                            <TextBlock Classes="Warning" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextBlock12">
+                            <TextBlock Classes="Danger" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextBlock13">
+                            <TextBlock />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextBlock14">
+                            <TextBlock IsEnabled="False" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <TextBox aristeus:TextBoxExtensions.AddDeleteButton="True"
+                                 Text="{Binding TextBlockValue}"
+                                 UseFloatingPlaceholder="True"
+                                 PlaceholderText="TextBlock content" />
+                    </StackPanel>
+                </aristeus:GroupBox>
+            </aristeus:GlassCard>
+
+            <aristeus:GlassCard>
+                <aristeus:GroupBox Header="Selectable Text Styles">
+                    <StackPanel Spacing="15">
+                        <StackPanel Classes="HeaderContent">
+                            <SelectableTextBlock>
+                                AristeusUI defines some basic text classes that you can use in your application.
+                            </SelectableTextBlock>
+                            <TextBlock>
+                                The h and color styles can be combined.
+                            </TextBlock>
+                        </StackPanel>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="SelectableTextHyperlink">
+                            <SelectableTextBlock xml:space="preserve">Text With A <HyperlinkButton Command="{Binding HyperlinkClickedCommand}"
+                                                 Content="Hyperlink"
+                                                 IsVisited="{Binding HyperlinkVisited}" /> Inside.</SelectableTextBlock>
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="SelectableTextBlock1">
+                            <SelectableTextBlock Classes="h1" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="SelectableTextBlock2">
+                            <SelectableTextBlock Classes="h2" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="SelectableTextBlock3">
+                            <SelectableTextBlock Classes="h3" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="SelectableTextBlock4">
+                            <SelectableTextBlock Classes="h4" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="SelectableTextBlock5">
+                            <SelectableTextBlock Classes="h5" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="SelectableTextBlock6">
+                            <SelectableTextBlock Classes="Caption" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="SelectableTextBlock7">
+                            <SelectableTextBlock Classes="Primary" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="SelectableTextBlock8">
+                            <SelectableTextBlock Classes="Accent" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="SelectableTextBlock9">
+                            <SelectableTextBlock Classes="Success" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="SelectableTextBlock10">
+                            <SelectableTextBlock Classes="Information" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="SelectableTextBlock11">
+                            <SelectableTextBlock Classes="Warning" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="SelectableTextBlock12">
+                            <SelectableTextBlock Classes="Danger" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="SelectableTextBlock13">
+                            <SelectableTextBlock />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="SelectableTextBlock14">
+                            <SelectableTextBlock IsEnabled="False" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <TextBox aristeus:TextBoxExtensions.AddDeleteButton="True"
+                                 Text="{Binding SelectableTextBlockValue}"
+                                 UseFloatingPlaceholder="True"
+                                 PlaceholderText="SelectableTextBlock content" />
+                    </StackPanel>
+                </aristeus:GroupBox>
+            </aristeus:GlassCard>
+
+            <aristeus:GlassCard>
+                <aristeus:GroupBox Header="Text Input">
+                    <StackPanel Classes="HeaderContent">
+                        <TextBlock>
+                            There are a few helpers available to make textboxes simpler and more powerful to use.
+                        </TextBlock>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextBox1">
+                            <TextBox />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextBox1Search">
+                            <TextBox>
+                                <TextBox.InnerLeftContent>
+                                    <avalonia:MaterialIcon Width="17"
+                                                           Height="17"
+                                                           Margin="5,0"
+                                                           VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource AristeusLowText}"
+                                                           Kind="Search" />
+                                </TextBox.InnerLeftContent>
+                                <TextBox.InnerRightContent>
+                                    <avalonia:MaterialIcon Width="17"
+                                                           Height="17"
+                                                           Margin="5,0"
+                                                           VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource AristeusLowText}"
+                                                           Kind="Check" />
+                                </TextBox.InnerRightContent>
+                            </TextBox>
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextBox2">
+                            <TextBox Text="" aristeus:TextBoxExtensions.ResetText="" PlaceholderText="PlaceholderText" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextBox3">
+                            <TextBox aristeus:TextBoxExtensions.Prefix="{avalonia:MaterialIconExt Kind=Web}"
+                                     aristeus:TextBoxExtensions.ResetText="google"
+                                     aristeus:TextBoxExtensions.Unit=".com" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextBox4">
+                            <TextBox Classes="revealPasswordButton" PasswordChar="*" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextBox5">
+                            <TextBox aristeus:TextBoxExtensions.ResetText="Reset to default" aristeus:TextBoxExtensions.AddDeleteButton="True" />
+                        </showMeTheXaml:XamlDisplay>
+
+                        <showMeTheXaml:XamlDisplay UniqueId="TextBox6">
+                            <aristeus:GlassCard Width="400"
+                                            Margin="25"
+                                            HorizontalAlignment="Center">
+                                <StackPanel Spacing="8">
+                                    <TextBox Text="Programming"
+                                             aristeus:TextBoxExtensions.ResetText="Programming"
+                                             UseFloatingPlaceholder="True"
+                                             PlaceholderText="Hobbies" />
+                                </StackPanel>
+                            </aristeus:GlassCard>
+                        </showMeTheXaml:XamlDisplay>
+
+                    </StackPanel>
+                </aristeus:GroupBox>
+            </aristeus:GlassCard>
+        </WrapPanel>
+    </ScrollViewer>
+</UserControl>

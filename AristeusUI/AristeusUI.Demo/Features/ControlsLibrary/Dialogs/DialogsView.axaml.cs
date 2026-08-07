@@ -1,0 +1,11 @@
+using Avalonia.Controls;
+
+namespace AristeusUI.Demo.Features.ControlsLibrary.Dialogs;
+
+public partial class DialogsView : UserControl
+{
+    public DialogsView()
+    {
+        InitializeComponent();
+    }
+}

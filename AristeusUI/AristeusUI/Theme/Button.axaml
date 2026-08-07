@@ -1,0 +1,553 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:aristeus="https://github.com/kikipoulet/AristeusUI"
+                    xmlns:theme="clr-namespace:AristeusUI.Theme">
+    <Design.PreviewWith>
+        <Border MaxWidth="800" Margin="20">
+            <StackPanel Spacing="5">
+                <WrapPanel Orientation="Horizontal">
+                    <TextBlock Margin="5"
+                               VerticalAlignment="Center"
+                               FontWeight="Bold"
+                               Text="Button..............:" />
+                    <Button Margin="5" Content="Standard" />
+                    <Button Margin="5"
+                            Classes="Basic"
+                            Content="Basic" />
+                    <Button Margin="5"
+                            Classes="Void"
+                            Content="Void" />
+                    <Button Margin="5"
+                            Classes="Accent"
+                            Content="Accent" />
+                    <Button Margin="5"
+                            Classes="Discrete"
+                            Content="Discrete">
+                        <theme:ButtonExtensions.Icon>
+                            <PathIcon Data="{x:Static aristeus:Icons.Star}" />
+                        </theme:ButtonExtensions.Icon>
+                    </Button>
+                    <Button Margin="5"
+                            Classes="Flat"
+                            Content="Flat">
+                        <theme:ButtonExtensions.Icon>
+                            <PathIcon Data="{x:Static aristeus:Icons.Calendar}" />
+                        </theme:ButtonExtensions.Icon>
+                    </Button>
+                    <Button Margin="5" Classes="Outlined Icon">
+                        <PathIcon Data="{x:Static aristeus:Icons.Star}" />
+                    </Button>
+                    <Button Margin="5" Classes="Outlined Icon">
+                        <theme:ButtonExtensions.Icon>
+                            <PathIcon Data="{x:Static aristeus:Icons.Star}" />
+                        </theme:ButtonExtensions.Icon>
+                    </Button>
+                    <Button Margin="5"
+                            Classes="Flat Icon"
+                            Content="&#9729;" />
+                    <Button Margin="5"
+                            Classes="Flat Accent Icon"
+                            Content="&#9729;" />
+                    <Button Margin="5"
+                            Classes="Danger Icon"
+                            Content="&#9729;" />
+                    <Button Margin="5"
+                            Classes="Flat NoPressedAnimation"
+                            Content="NoPressedAnimation" />
+                    <Button Margin="5"
+                            Classes="Flat Accent"
+                            Content="Flat Accent" />
+                    <Button Margin="5"
+                            Classes="Outlined"
+                            Content="Outline" />
+                    <Button Margin="5"
+                            Classes="Success"
+                            Content="Success" />
+                    <Button Margin="5"
+                            Classes="Information"
+                            Content="Information" />
+                    <Button Margin="5"
+                            Classes="Warning"
+                            Content="Warning" />
+                    <Button Margin="5"
+                            Classes="Danger"
+                            Content="Danger" />
+                    <Button Margin="5"
+                            VerticalAlignment="Top"
+                            Classes="Small"
+                            Content="Small" />
+                    <Button Margin="5"
+                            VerticalAlignment="Top"
+                            Classes="Small">
+                        <theme:ButtonExtensions.Icon>
+                            <PathIcon Data="{x:Static aristeus:Icons.TriangleAlert}" />
+                        </theme:ButtonExtensions.Icon>
+                    </Button>
+                    <Button Margin="5"
+                            VerticalAlignment="Top"
+                            Classes="Small Flat">
+                        <theme:ButtonExtensions.Icon>
+                            <PathIcon Data="{x:Static aristeus:Icons.CircleHelp}" />
+                        </theme:ButtonExtensions.Icon>
+                    </Button>
+
+                </WrapPanel>
+
+                <WrapPanel Orientation="Horizontal">
+                    <Button Margin="5"
+                            Classes="Large Flat"
+                            Content="Large" />
+                    <Button Margin="5"
+                            Classes="Large Flat Rounded"
+                            Content="Large Rounded" />
+                </WrapPanel>
+
+
+                <WrapPanel Orientation="Horizontal">
+
+                    <TextBlock Margin="5"
+                               VerticalAlignment="Center"
+                               FontWeight="Bold"
+                               Text="RepeatButton: " />
+                    <RepeatButton Margin="5" Content="Standard" />
+                    <RepeatButton Margin="5"
+                                  theme:ButtonExtensions.Icon="&#9729;"
+                                  Classes="Discrete"
+                                  Content="Discrete" />
+                    <RepeatButton Margin="5"
+                                  theme:ButtonExtensions.Icon="&#9729;"
+                                  Classes="Flat"
+                                  Content="Flat" />
+                    <RepeatButton Margin="5"
+                                  Classes="Flat Accent"
+                                  Content="Flat Accent" />
+                    <RepeatButton Margin="5"
+                                  Classes="Outlined"
+                                  Content="Outline" />
+                    <RepeatButton Margin="5"
+                                  Classes="Success"
+                                  Content="Success" />
+                    <RepeatButton Margin="5"
+                                  Classes="Information"
+                                  Content="Information" />
+                    <RepeatButton Margin="5"
+                                  Classes="Warning"
+                                  Content="Warning" />
+                    <RepeatButton Margin="5"
+                                  Classes="Danger"
+                                  Content="Danger" />
+                </WrapPanel>
+            </StackPanel>
+
+        </Border>
+    </Design.PreviewWith>
+    <ControlTheme x:Key="AristeusBaseButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{DynamicResource AristeusBackground}" />
+        <Setter Property="Foreground" Value="{DynamicResource AristeusText}" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontWeight" Value="{DynamicResource DefaultDemiBold}" />
+        <Setter Property="BorderThickness" Value="1.2" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AristeusControlBorderBrush}" />
+        <Setter Property="CornerRadius" Value="{DynamicResource SmallCornerRadius}" />
+        <Setter Property="Padding" Value="20, 8" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Name="RootBorder"
+                        Padding="{TemplateBinding Padding}"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        TextElement.Foreground="{TemplateBinding Foreground}"
+                        Transitions="{TemplateBinding Transitions}">
+                    <Border.Resources>
+                        <theme:BoolToWidthProgressConverter x:Key="WidthConverter" />
+                    </Border.Resources>
+                    <StackPanel HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                Orientation="Horizontal"
+                                Spacing="10">
+                        <Viewbox Name="PART_ExtShowProgressViewBox"
+                                 Width="{TemplateBinding theme:ButtonExtensions.ShowProgress,
+                                                         Converter={StaticResource WidthConverter}}"
+                                 Height="24"
+                                 Margin="0,-5,-10,-5">
+                            <Viewbox.Styles>
+                                <Style Selector="Viewbox#PART_ExtShowProgressViewBox[Width=0]">
+                                    <Setter Property="IsVisible" Value="False" />
+                                </Style>
+                            </Viewbox.Styles>
+                            <Viewbox.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Property="Width" Duration="0:0:0.3" />
+                                </Transitions>
+                            </Viewbox.Transitions>
+
+                            <ContentPresenter Name="PART_ExtShowProgress" Content="{TemplateBinding theme:ButtonExtensions.ShowProgress, Converter={x:Static aristeus:ProgressToContentConverter.Instance}}" />
+                        </Viewbox>
+
+                        <Viewbox Name="PART_ExtIconViewBox"
+                                 Height="{TemplateBinding FontSize}"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center"
+                                 IsVisible="{TemplateBinding theme:ButtonExtensions.Icon,
+                                                             Converter={x:Static ObjectConverters.IsNotNull}}">
+
+                            <ContentPresenter Name="PART_ExtIcon"
+                                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              Content="{TemplateBinding theme:ButtonExtensions.Icon}"
+                                              FontFamily="{TemplateBinding FontFamily}"
+                                              FontSize="{TemplateBinding FontSize}"
+                                              FontWeight="{TemplateBinding FontWeight}"
+                                              Foreground="{TemplateBinding Foreground}" />
+                        </Viewbox>
+
+                        <ContentPresenter Name="PART_ContentPresenter"
+                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          FontFamily="{TemplateBinding FontFamily}"
+                                          FontSize="{TemplateBinding FontSize}"
+                                          FontWeight="{TemplateBinding FontWeight}"
+                                          Foreground="{TemplateBinding Foreground}"
+                                          IsVisible="{TemplateBinding Content,
+                                                                      Converter={x:Static ObjectConverters.IsNotNull}}"
+                                          IsHitTestVisible="False"
+                                          RecognizesAccessKey="True" />
+                    </StackPanel>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </ControlTheme>
+
+
+    <ControlTheme x:Key="AristeusButtonStyle"
+                  BasedOn="{StaticResource AristeusBaseButtonStyle}"
+                  TargetType="Button">
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.1" />
+                <BrushTransition Property="Foreground" Duration="0:0:0.1" />
+                <BrushTransition Property="BorderBrush" Duration="0:0:0.20" />
+                <DoubleTransition Property="Opacity" Duration="0:0:0.35" />
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1" />
+            </Transitions>
+        </Setter>
+
+        <!--  Nested Selectors For Basic Button  -->
+        <Style Selector="^:disabled">
+            <Setter Property="Opacity" Value="{DynamicResource ThemeDisabledOpacity}" />
+        </Style>
+
+        <!--  Events For Basic Button  -->
+        <Style Selector="^:pointerover, ^:flyout-open">
+            <Setter Property="Foreground" Value="{DynamicResource AristeusPrimaryColor120}" />
+            <Style Selector="^ /template/ Border">
+                <Setter Property="BorderBrush" Value="{DynamicResource AristeusPrimaryColor120}" />
+            </Style>
+        </Style>
+        <Style Selector="^:pressed:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource AristeusPrimaryColor}" />
+            <Setter Property="RenderTransform" Value="scale(0.97)" />
+            <Style Selector="^ /template/ Border">
+                <Setter Property="BorderBrush" Value="{DynamicResource AristeusPrimaryColor}" />
+            </Style>
+            <Style Selector="^.Icon /template/ Border">
+                <!--  <Setter Property="Background" Value="{DynamicResource AristeusCardBackground}" /> -->
+                <Setter Property="BorderBrush" Value="{DynamicResource AristeusPrimaryColor}" />
+                <Setter Property="RenderTransform" Value="scale(0.95)" />
+            </Style>
+        </Style>
+
+        <!--  Classes  -->
+        <Style Selector="^.NoPressedAnimation">
+            <Style Selector="^:pressed:pointerover">
+                <Setter Property="Background" Value="{DynamicResource AristeusCardBackground}" />
+                <Setter Property="Foreground" Value="{DynamicResource AristeusPrimaryColor}" />
+                <Setter Property="RenderTransform">
+                    <Setter.Value>
+                        <ScaleTransform ScaleX="1" ScaleY="1" />
+                    </Setter.Value>
+                </Setter>
+                <Style Selector="^ /template/ Border">
+                    <Setter Property="BorderBrush" Value="{DynamicResource AristeusPrimaryColor}" />
+                </Style>
+            </Style>
+        </Style>
+
+        <Style Selector="^.Discrete">
+            <Setter Property="Background" Value="{DynamicResource AristeusCardBackground}" />
+        </Style>
+
+        <!--  Classes  -->
+        <Style Selector="^.Accent">
+            <Setter Property="Foreground" Value="{DynamicResource AristeusAccentColor75}" />
+            <Style Selector="^:pointerover, ^:flyout-open">
+                <Setter Property="Foreground" Value="{DynamicResource AristeusAccentColor75}" />
+                <Style Selector="^ /template/ Border">
+                    <Setter Property="BorderBrush" Value="{DynamicResource AristeusAccentColor}" />
+                </Style>
+            </Style>
+            <Style Selector="^:pressed:pointerover">
+                <Setter Property="Background" Value="{DynamicResource AristeusCardBackground}" />
+                <Setter Property="Foreground" Value="{DynamicResource AristeusAccentColor}" />
+                <Setter Property="RenderTransform" Value="scale(0.97)" />
+                <Style Selector="^ /template/ Border">
+                    <Setter Property="BorderBrush" Value="{DynamicResource AristeusAccentColor}" />
+                </Style>
+                <Style Selector="^.Icon /template/ Border">
+                    <Setter Property="Background" Value="{DynamicResource AristeusCardBackground}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AristeusAccentColor}" />
+                    <Setter Property="RenderTransform" Value="scale(0.95)" />
+                </Style>
+            </Style>
+        </Style>
+
+        <Style Selector="^.Basic">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Padding" Value="11,8" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource AristeusPrimaryColor120}" />
+            <!--  Events  -->
+            <Style Selector="^:pointerover, ^:flyout-open">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="RenderTransform" Value="scale(1.03)" />
+            </Style>
+            <Style Selector="^.Icon:pointerover, ^.Icon:flyout-open">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="RenderTransform" Value="scale(1.07)" />
+            </Style>
+            <Style Selector="^:pressed:pointerover">
+                <Setter Property="Background" Value="Transparent" />
+            </Style>
+
+            <!--  Color Variants  -->
+            <Style Selector="^.Accent">
+                <Setter Property="Foreground" Value="{DynamicResource AristeusAccentColor}" />
+            </Style>
+        </Style>
+
+        <Style Selector="^.Void">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <!--  Events  -->
+            <Style Selector="^:pointerover, ^:flyout-open">
+                <Setter Property="RenderTransform" Value="scale(1.03)" />
+            </Style>
+        </Style>
+
+        <Style Selector="^.Flat">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="{DynamicResource AristeusPrimaryColor}" />
+            <Setter Property="Foreground" Value="White" />
+            <!--  Nested Selectors  -->
+            <Style Selector="^ /template/ Border">
+                <Setter Property="BoxShadow" Value="{DynamicResource AristeusLowShadow}" />
+            </Style>
+            <!--  Events  -->
+            <Style Selector="^:pointerover, ^:flyout-open">
+                <Setter Property="Background" Value="{DynamicResource AristeusPrimaryColor75}" />
+            </Style>
+            <Style Selector="^:pressed:pointerover">
+                <Setter Property="Background" Value="{DynamicResource AristeusPrimaryColor75}" />
+            </Style>
+
+            <!--  Color Variants  -->
+            <Style Selector="^.Accent">
+                <Setter Property="Background" Value="{DynamicResource AristeusAccentColor}" />
+                <Style Selector="^:pointerover, ^:flyout-open">
+                    <Setter Property="Background" Value="{DynamicResource AristeusAccentColor75}" />
+                </Style>
+                <Style Selector="^:pressed:pointerover">
+                    <Setter Property="Background" Value="{DynamicResource AristeusAccentColor75}" />
+                </Style>
+
+            </Style>
+        </Style>
+
+        <Style Selector="^.Outlined">
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AristeusPrimaryColor120}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource AristeusPrimaryColor120}" />
+            <!--  Events  -->
+            <Style Selector="^:pointerover, ^:flyout-open">
+                <Setter Property="BorderBrush" Value="Transparent" />
+                <Setter Property="Background" Value="{DynamicResource AristeusPrimaryColor}" />
+                <Setter Property="Foreground" Value="White" />
+            </Style>
+            <Style Selector="^:pressed:pointerover /template/ Border">
+                <Setter Property="BorderBrush" Value="Transparent" />
+            </Style>
+
+            <!--  Color Variants  -->
+            <Style Selector="^.Accent">
+                <Setter Property="Foreground" Value="{DynamicResource AristeusAccentColor}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource AristeusAccentColor}" />
+                <Style Selector="^:pointerover, ^:flyout-open">
+                    <Setter Property="Foreground" Value="White" />
+                    <Setter Property="Background" Value="{DynamicResource AristeusAccentColor}" />
+                </Style>
+                <Style Selector="^:pressed:pointerover">
+                    <Setter Property="Background" Value="{DynamicResource AristeusAccentColor}" />
+                </Style>
+
+            </Style>
+        </Style>
+
+        <Style Selector="^.Success">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="{DynamicResource AristeusSuccessColor}" />
+            <Setter Property="Foreground" Value="{DynamicResource AristeusSuccessForeground}" />
+            <Style Selector="^ /template/ Border">
+                <Setter Property="BoxShadow" Value="{DynamicResource AristeusLowShadow}" />
+            </Style>
+            <!--  Events  -->
+            <Style Selector="^:pointerover, ^:flyout-open">
+                <Setter Property="Background" Value="{DynamicResource AristeusSuccessMediumColor}" />
+            </Style>
+            <Style Selector="^:pressed">
+                <Setter Property="Background" Value="{DynamicResource AristeusSuccessDarkColor}" />
+            </Style>
+        </Style>
+
+        <Style Selector="^.Information">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="{DynamicResource AristeusInformationColor}" />
+            <Setter Property="Foreground" Value="{DynamicResource AristeusInformationForeground}" />
+            <Style Selector="^ /template/ Border">
+                <Setter Property="BoxShadow" Value="{DynamicResource AristeusLowShadow}" />
+            </Style>
+            <!--  Events  -->
+            <Style Selector="^:pointerover, ^:flyout-open">
+                <Setter Property="Background" Value="{DynamicResource AristeusInformationMediumColor}" />
+            </Style>
+            <Style Selector="^:pressed:pointerover">
+                <Setter Property="Background" Value="{DynamicResource AristeusInformationDarkColor}" />
+            </Style>
+        </Style>
+
+        <Style Selector="^.Warning">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="{DynamicResource AristeusWarningColor}" />
+            <Setter Property="Foreground" Value="{DynamicResource AristeusWarningForeground}" />
+            <Style Selector="^ /template/ Border">
+                <Setter Property="BoxShadow" Value="{DynamicResource AristeusLowShadow}" />
+            </Style>
+            <!--  Events  -->
+            <Style Selector="^:pointerover, ^:flyout-open">
+                <Setter Property="Background" Value="{DynamicResource AristeusWarningMediumColor}" />
+            </Style>
+            <Style Selector="^:pressed:pointerover">
+                <Setter Property="Background" Value="{DynamicResource AristeusWarningDarkColor}" />
+            </Style>
+        </Style>
+
+        <Style Selector="^.Danger">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="{DynamicResource AristeusDangerColor}" />
+            <Setter Property="Foreground" Value="{DynamicResource AristeusDangerForeground}" />
+            <Style Selector="^ /template/ Border">
+                <Setter Property="BoxShadow" Value="{DynamicResource AristeusLowShadow}" />
+            </Style>
+            <!--  Events  -->
+            <Style Selector="^:pointerover, ^:flyout-open">
+                <Setter Property="Background" Value="{DynamicResource AristeusDangerMediumColor}" />
+            </Style>
+            <Style Selector="^:pressed:pointerover">
+                <Setter Property="Background" Value="{DynamicResource AristeusDangerDarkColor}" />
+            </Style>
+        </Style>
+
+        <Style Selector="^.Rounded">
+            <Setter Property="CornerRadius" Value="100" />
+        </Style>
+        <Style Selector="^.Small">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="Padding" Value="10" />
+        </Style>
+        <Style Selector="^.Large">
+            <Setter Property="CornerRadius" Value="11" />
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="Padding" Value="30,12" />
+        </Style>
+
+        <Style Selector="^.Icon">
+            <Setter Property="CornerRadius" Value="100" />
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+
+        <Style Selector="^.WindowControlsButton">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="Height" Value="25" />
+            <Setter Property="Width" Value="25" />
+            <Setter Property="Foreground" Value="{DynamicResource AristeusText}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0.01" />
+                </Transitions>
+            </Setter>
+            <Style Selector="^:pointerover, ^:flyout-open">
+                <Setter Property="Background" Value="{DynamicResource AristeusPrimaryColor25}" />
+            </Style>
+            <Style Selector="^.Close">
+                <Style Selector="^:pointerover, ^:flyout-open">
+                    <Setter Property="Background" Value="#90D00000" />
+                </Style>
+                <Style Selector="^:pressed:pointerover">
+                    <Setter Property="Background" Value="#C5D30000" />
+                </Style>
+            </Style>
+        </Style>
+
+        <Style Selector="^.Card">
+            <Setter Property="Padding" Value="20" />
+            <Setter Property="CornerRadius" Value="{DynamicResource MediumCornerRadius}" />
+            <Setter Property="BorderThickness" Value="1.5" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AristeusLightBorderBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AristeusCardBackground}" />
+            <Setter Property="Foreground" Value="{DynamicResource AristeusText}" />
+            <Setter Property="Margin" Value="7" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <ContentPresenter Name="PART_ContentPresenter"
+                                      Margin="7"
+                                      Padding="{TemplateBinding Padding}"
+                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                      Background="{TemplateBinding Background}"
+                                      BorderBrush="{TemplateBinding BorderBrush}"
+                                      BorderThickness="{TemplateBinding BorderThickness}"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      CornerRadius="{TemplateBinding CornerRadius}"
+                                      Foreground="{TemplateBinding Foreground}"
+                                      RecognizesAccessKey="True"
+                                      TextElement.Foreground="{TemplateBinding Foreground}" />
+                </ControlTemplate>
+            </Setter>
+        </Style>
+    </ControlTheme>
+    <ControlTheme x:Key="{x:Type Button}"
+                  BasedOn="{StaticResource AristeusButtonStyle}"
+                  TargetType="Button" />
+
+    <ControlTheme x:Key="{x:Type RepeatButton}"
+                  BasedOn="{StaticResource AristeusButtonStyle}"
+                  TargetType="RepeatButton" />
+</ResourceDictionary>

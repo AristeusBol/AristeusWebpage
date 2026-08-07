@@ -1,0 +1,96 @@
+﻿using AristeusUI.Helpers;
+using System.ComponentModel;
+using System.Reflection;
+
+namespace AristeusUI.Controls
+{
+    public abstract class PropertyViewModelBase<T> : AristeusObservableObject, IPropertyViewModel<T?>
+    {
+        private readonly string _propertyName;
+
+        private T? _value;
+
+        public T? Value
+        {
+            get => _value;
+            set
+            {
+                if (SetAndRaise(ref _value, value))
+                {
+                    ViewModelSetter(value);
+                }
+            }
+        }
+
+        object? IPropertyViewModel.Value
+        {
+            get => Value;
+            set
+            {
+                switch (value)
+                {
+                    case null:
+                        Value = default;
+                        break;
+                    case T typedValue:
+                        Value = typedValue;
+                        break;
+                    default:
+                    {
+                        var targetType = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+                        if (!targetType.IsPrimitive)
+                        {
+                            throw new InvalidOperationException(
+                                $"Unsupported conversion from {value.GetType()} to {targetType}");
+                        }
+
+                        Value = (T?)Convert.ChangeType(value, targetType);
+                        break;
+                    }
+                }
+            }
+        }
+
+        public string DisplayName { get; }
+        public bool IsReadOnly { get; init; }
+        protected PropertyInfo PropertyInfo { get; }
+        protected INotifyPropertyChanged Viewmodel { get; }
+
+        public PropertyViewModelBase(INotifyPropertyChanged viewmodel, string displayName, PropertyInfo propertyInfo)
+        {
+            Viewmodel = viewmodel;
+            DisplayName = displayName;
+            PropertyInfo = propertyInfo;
+            IsReadOnly = !propertyInfo.CanWrite;
+            _propertyName = propertyInfo.Name;
+            _value = ViewModelGetter();
+            Viewmodel.PropertyChanged += OnPropertyChanged;
+        }
+
+        private void OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (_propertyName == e.PropertyName)
+            {
+                Value = ViewModelGetter();
+            }
+        }
+
+        protected T? ViewModelGetter()
+        {
+            return (T?)PropertyInfo.GetValue(Viewmodel);
+        }
+
+        protected void ViewModelSetter(T? newValue)
+        {
+            if (PropertyInfo.CanWrite)
+            {
+                PropertyInfo.SetValue(Viewmodel, newValue);
+            }
+        }
+
+        public void Dispose()
+        {
+            Viewmodel.PropertyChanged -= OnPropertyChanged;
+        }
+    }
+}

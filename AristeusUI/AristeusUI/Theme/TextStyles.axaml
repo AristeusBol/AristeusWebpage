@@ -1,0 +1,19 @@
+﻿<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Styles.Resources>
+        <FontFamily x:Key="DefaultFontFamily">avares://AristeusUI/CustomFont#Quicksand</FontFamily>
+        <FontWeight x:Key="DefaultDemiBold">DemiBold</FontWeight>
+    </Styles.Resources>
+
+    <Design.PreviewWith>
+        <StackPanel Margin="20" Spacing="10">
+            <TextBlock Text="AristeusUI default text" />
+            <SelectableTextBlock Text="AristeusUI default text" />
+            <Button Content="AristeusUI default text" />
+        </StackPanel>
+    </Design.PreviewWith>
+
+    <Style Selector="TextBlock, SelectableTextBlock, TextBox, Button, RepeatButton, ToggleButton, RadioButton, SplitButton, ToggleSplitButton, DropDownButton, NumericUpDown">
+        <Setter Property="TextElement.FontFamily" Value="{DynamicResource DefaultFontFamily}" />
+    </Style>
+</Styles>

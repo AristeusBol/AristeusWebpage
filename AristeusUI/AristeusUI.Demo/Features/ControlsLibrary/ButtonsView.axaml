@@ -1,0 +1,331 @@
+<UserControl x:Class="AristeusUI.Demo.Features.ControlsLibrary.ButtonsView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:content="using:AristeusUI.Content"
+             xmlns:controlsLibrary="clr-namespace:AristeusUI.Demo.Features.ControlsLibrary"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:showMeTheXaml="clr-namespace:ShowMeTheXaml;assembly=ShowMeTheXaml.Avalonia"
+             xmlns:aristeus="https://github.com/kikipoulet/AristeusUI"
+             xmlns:animations="clr-namespace:AristeusUI.Animations;assembly=AristeusUI"
+             d:DesignHeight="450"
+             d:DesignWidth="800"
+             x:DataType="controlsLibrary:ButtonsViewModel"
+             mc:Ignorable="d">
+    <UserControl.Styles>
+        <Style Selector="Button">
+            <Setter Property="Content" Value="Button" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="aristeus:ButtonExtensions.ShowProgress" Value="{Binding IsBusy}" />
+         
+            <Setter Property="IsEnabled" Value="{Binding IsEnabled}" />
+        </Style>
+        <Style Selector="Button.Icon">
+            <Setter Property="Content">
+                <Template>
+                    <PathIcon Data="{x:Static content:Icons.Star}" Foreground="{Binding Foreground, RelativeSource={RelativeSource FindAncestor, AncestorType=Button}}" />
+                </Template>
+            </Setter>
+        </Style>
+        <Style Selector="DropDownButton">
+            <Setter Property="Content" Value="Button" />
+            <Setter Property="aristeus:ButtonExtensions.ShowProgress" Value="{Binding IsBusy}" />
+            <Setter Property="IsEnabled" Value="{Binding IsEnabled}" />
+            <Setter Property="Flyout">
+                <MenuFlyout>
+                    <MenuItem Header="Item 1" />
+                    <MenuItem Header="Item 2" />
+                    <MenuItem Header="Item 3" />
+                </MenuFlyout>
+            </Setter>
+        </Style>
+    </UserControl.Styles>
+    <Grid RowDefinitions="Auto,*" >
+        <aristeus:GlassCard Classes="HeaderCard" >
+            <aristeus:GroupBox  Header="Buttons">
+                <StackPanel Classes="HeaderContent">
+                    <TextBlock>
+                        AristeusUI has a handful of button styles, available in both the standard primary color, but also in the theme's accent color.
+                    </TextBlock>
+                    <TextBlock>
+                        Clicking on any one of the buttons will make them all "Busy" for 3 seconds, and how this is achieved can be seen in the XAML for the Busy Button.
+                    </TextBlock>
+                    <StackPanel Margin="0,25,0,0" Orientation="Horizontal">
+                        <TextBlock Margin="0,0,0,0"
+                                   VerticalAlignment="Center"
+                                   FontWeight="DemiBold"
+                                   Text="Buttons Enabled: " />
+                        <ToggleSwitch Margin="15,0,0,0"
+                                      Classes="Switch"
+                                      IsChecked="{Binding IsEnabled}" />
+
+                    </StackPanel>
+                </StackPanel>
+            </aristeus:GroupBox>
+        </aristeus:GlassCard>
+        <ScrollViewer Grid.Row="1">
+            <WrapPanel Classes="PageContainer">
+                <aristeus:GlassCard animations:HoverBehavior.Scale="1.1" >
+                    <aristeus:GroupBox Header="Standard Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="Button1">
+                            <Button Click="Button_OnClick"  animations:VisibilityBehavior.IsVisible="{Binding IsEnabled}" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard animations:LoadingBehavior.IsBusy="{Binding !IsEnabled}">
+                    <aristeus:GroupBox Header="Basic Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="Button2">
+                            <Button Click="Button_OnClick" Classes="Basic" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+<aristeus:GlassCard animations:GlowBehavior.IsActive="{Binding !IsEnabled}"
+                              animations:GlowBehavior.Color="{DynamicResource AristeusPrimaryColor}"
+                              animations:GlowBehavior.Thickness="3">
+                    <aristeus:GroupBox Header="Discrete Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="ButtonDiscrete">
+                            <Button Width="200" Click="Button_OnClick" Classes="Discrete" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard animations:DisabledBehavior.Opacity="0.1" animations:DisabledBehavior.Scale="0.9" IsEnabled="{Binding IsEnabled}">
+                    <aristeus:GroupBox Header="Flat Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="Button3">
+                            <Button Classes="Flat" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard animations:ErrorBehavior.IsActive="{Binding !IsEnabled}"
+                                animations:ErrorBehavior.ErrorMessage="This is an error ! A longer message for testing purpose !">
+                    <aristeus:GroupBox Header="Flat Button with icon">
+                        <showMeTheXaml:XamlDisplay UniqueId="Button3WithIcon">
+                            <Button aristeus:ButtonExtensions.Icon="{avalonia:MaterialIconExt Kind=Calendar}" Classes="Flat" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Flat Rounded Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="Button4">
+                            <Button Classes="Rounded Flat" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Outlined Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="Button5">
+                            <Button Classes="Outlined" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Standard Accent Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="Button6">
+                            <Button animations:GlowBehavior.IsActive="{Binding !IsEnabled}" Classes="Accent" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Basic Accent Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="Button7">
+                            <Button Classes="Basic Accent" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Flat Accent Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="Button8">
+                            <Button Classes="Flat Accent" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Flat Rounded Accent Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="Button9">
+                            <Button Classes="Rounded Flat Accent" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Outlined Accent Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="Button10">
+                            <Button Classes="Outlined Accent" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Success Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="ButtonSuccess">
+                            <Button Classes="Success" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Success Rounded Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="ButtonSuccessRounded">
+                            <Button Classes="Success Rounded" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Information Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="ButtonInformation">
+                            <Button Classes="Information" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Warning Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="ButtonWarning">
+                            <Button Classes="Warning" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Danger Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="ButtonDanger">
+                            <Button Classes="Danger" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Busy Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="Button11">
+                            <Button aristeus:ButtonExtensions.ShowProgress="True" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Small Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="ButtonSmall">
+                            <Button Classes="Flat Small" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Small Action Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="ButtonSmallAction">
+                            <Button Classes="Warning Small" Content="{avalonia:MaterialIconExt Kind=Warning}" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Large Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="Button12">
+                            <Button Classes="Flat Large" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Standard Icon Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="Button13">
+                            <Button Classes="Icon" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Basic Icon Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="Button14">
+                            <Button Classes="Basic Icon" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Flat Icon Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="Button15">
+                            <Button Classes="Flat Icon" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Outlined Icon Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="Button16">
+                            <Button Classes="Outlined Icon" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Basic Accent Icon Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="Button17">
+                            <Button Classes="Basic Accent Icon" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Flat Accent Icon Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="Button18">
+                            <Button Classes="Flat Accent Icon" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Outlined Accent Icon Button">
+                        <showMeTheXaml:XamlDisplay UniqueId="Button19">
+                            <Button Classes="Outlined Accent Icon" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="DropDownButton">
+                        <showMeTheXaml:XamlDisplay UniqueId="DropDownButton1">
+                            <DropDownButton />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Flat DropDownButton">
+                        <showMeTheXaml:XamlDisplay UniqueId="DropDownButtonFlat">
+                            <DropDownButton Classes="Flat" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Flat DropDownButton">
+                        <showMeTheXaml:XamlDisplay UniqueId="DropDownButtonFlatAccent">
+                            <DropDownButton Classes="Flat Accent" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Success DropDownButton">
+                        <showMeTheXaml:XamlDisplay UniqueId="DropDownButtonSuccess">
+                            <DropDownButton Classes="Success" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Information DropDownButton">
+                        <showMeTheXaml:XamlDisplay UniqueId="DropDownButtonInformation">
+                            <DropDownButton Classes="Information" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Warning DropDownButton">
+                        <showMeTheXaml:XamlDisplay UniqueId="DropDownButtonWarning">
+                            <DropDownButton Classes="Warning" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Danger DropDownButton">
+                        <showMeTheXaml:XamlDisplay UniqueId="DropDownButtonDanger">
+                            <DropDownButton Classes="Danger" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+                <aristeus:GlassCard>
+                    <aristeus:GroupBox Header="Flat Icon DropDownButton">
+                        <showMeTheXaml:XamlDisplay UniqueId="DropDownButtonFlatIcon">
+                            <DropDownButton aristeus:ButtonExtensions.Icon="{avalonia:MaterialIconExt Kind=Cog}" Classes="Flat" />
+                        </showMeTheXaml:XamlDisplay>
+                    </aristeus:GroupBox>
+                </aristeus:GlassCard>
+            </WrapPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

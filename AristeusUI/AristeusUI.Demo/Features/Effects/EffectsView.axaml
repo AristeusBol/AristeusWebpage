@@ -1,0 +1,42 @@
+<UserControl x:Class="AristeusUI.Demo.Features.Effects.EffectsView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:avaloniaEdit="https://github.com/avaloniaui/avaloniaedit"
+             xmlns:aristeus="https://github.com/kikipoulet/AristeusUI"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:effects="clr-namespace:AristeusUI.Demo.Features.Effects"
+             xmlns:controls="using:AristeusUI.Demo.Controls"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             d:DesignHeight="450"
+             d:DesignWidth="800"
+             x:DataType="effects:EffectsViewModel"
+             mc:Ignorable="d">
+    <Grid ColumnDefinitions="*,*" RowDefinitions="*,Auto,Auto">
+        <aristeus:GlassCard Margin="20">
+            <controls:CodeEditor Name="Editor" Language="hlsl" />
+        </aristeus:GlassCard>
+        
+        <aristeus:InfoBar IsVisible="False" Margin="20,10" Name="ErrorText" IsClosable="False"
+                      Grid.Row="1" Severity="Error"
+                      Grid.Column="0" Title="Error" 
+        />
+        <Button Grid.Row="2"
+                Grid.Column="0"
+                Classes="Flat Large" Margin="20"
+                Click="Button_OnClick"
+                IsDefault="True"
+                Content="Compile and Run" />
+
+        <Border Grid.Row="0"
+                Grid.RowSpan="3"
+                Grid.Column="1"
+                Margin="25"
+                Padding="5"
+                BorderBrush="{DynamicResource AristeusBorderBrush}"
+                BorderThickness="2.5"
+                CornerRadius="5">
+            <effects:ShaderToyRenderer Name="ShaderToyRenderer" />
+        </Border>
+    </Grid>
+
+</UserControl>

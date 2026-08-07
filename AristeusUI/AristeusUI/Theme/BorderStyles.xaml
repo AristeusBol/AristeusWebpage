@@ -1,0 +1,53 @@
+﻿<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:aristeus="https://github.com/kikipoulet/AristeusUI">
+
+    <Design.PreviewWith>
+        <WrapPanel HorizontalAlignment="Center"
+                   Background="{DynamicResource AristeusBackground}"
+                   Orientation="Horizontal">
+            <Border Width="100"
+                    Height="100"
+                    Classes="GradientCard" />
+        </WrapPanel>
+    </Design.PreviewWith>
+
+    <Style Selector="Border.Card">
+        <Setter Property="Padding" Value="20" />
+        <Setter Property="CornerRadius" Value="{DynamicResource MediumCornerRadius}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AristeusBorderBrush}" />
+        <Setter Property="Background" Value="{DynamicResource AristeusCardBackground}" />
+    </Style>
+
+    <Style Selector="Border.GradientCard">
+        <Setter Property="Padding" Value="20" />
+        <Setter Property="CornerRadius" Value="{DynamicResource MediumCornerRadius}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AristeusBorderBrush}" />
+        <Setter Property="Background">
+            <RadialGradientBrush Center="120%,-220%" GradientOrigin="120%,-220%" RadiusX="300%" RadiusY="300%">
+                <GradientStop Offset="0.4" Color="{DynamicResource AristeusPrimaryColor}" />
+                <GradientStop Offset="1" Color="Transparent" />
+            </RadialGradientBrush>
+        </Setter>
+        <Setter Property="Margin" Value="7" />
+    </Style>
+
+    <Style Selector="Border.ElevatedCard">
+        <Setter Property="Padding" Value="20" />
+        <Setter Property="CornerRadius" Value="{DynamicResource MediumCornerRadius}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AristeusBorderBrush}" />
+        <Setter Property="Background" Value="{DynamicResource AristeusBackground}" />
+        <Setter Property="Margin" Value="7" />
+        <Setter Property="BoxShadow" Value="{DynamicResource AristeusPopupShadow}" />
+    </Style>
+
+    <Style Selector="Border.Hoverable:pointerover">
+        <Setter Property="BoxShadow" Value="0 0 7 0 LightGray" />
+    </Style>
+    
+    <Style Selector="aristeus|AristeusBackground">
+        <Setter Property="Margin" Value="-200"></Setter>
+    </Style>
+</Styles>

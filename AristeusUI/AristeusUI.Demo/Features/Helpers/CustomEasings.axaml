@@ -1,0 +1,125 @@
+﻿<UserControl
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    mc:Ignorable="d"
+    x:Class="AristeusUI.Demo.Features.Helpers.CustomEasings"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:animations="clr-namespace:AristeusUI.Animations;assembly=AristeusUI"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:helpers="clr-namespace:AristeusUI.Demo.Features.Helpers"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:aristeus="https://github.com/kikipoulet/AristeusUI"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel Margin="50" Spacing="20">
+
+        <TextBlock Classes="h1" Margin="0,70,0,0">3. Custom Easings</TextBlock>
+
+        <Border
+            Background="{DynamicResource AristeusControlBorderBrush}"
+            Height="1"
+            Margin="0,-15,0,20" />
+        <TextBlock Classes="h3" Margin="0,30,0,0">AristeusEaseInBackOutBack</TextBlock>
+
+        <TextBlock Classes="h5" Margin="0,15,0,-5">Soft</TextBlock>
+        <aristeus:GlassCard HorizontalAlignment="Left" Padding="5">
+            <helpers:EasingDemoBoxControl HorizontalAlignment="Left">
+                <helpers:EasingDemoBoxControl.Ease>
+                    <animations:AristeusEaseInBackOutBack BounceIntensity="Soft" />
+                </helpers:EasingDemoBoxControl.Ease>
+            </helpers:EasingDemoBoxControl>
+        </aristeus:GlassCard>
+
+        <TextBlock Classes="h5" Margin="0,15,0,-5">Normal</TextBlock>
+        <aristeus:GlassCard HorizontalAlignment="Left" Padding="5">
+            <helpers:EasingDemoBoxControl HorizontalAlignment="Left">
+                <helpers:EasingDemoBoxControl.Ease>
+                    <animations:AristeusEaseInBackOutBack BounceIntensity="Normal" />
+                </helpers:EasingDemoBoxControl.Ease>
+            </helpers:EasingDemoBoxControl>
+        </aristeus:GlassCard>
+
+        <TextBlock Classes="h5" Margin="0,15,0,-5">Strong</TextBlock>
+        <aristeus:GlassCard HorizontalAlignment="Left" Padding="5">
+            <helpers:EasingDemoBoxControl HorizontalAlignment="Left">
+                <helpers:EasingDemoBoxControl.Ease>
+                    <animations:AristeusEaseInBackOutBack BounceIntensity="Strong" />
+                </helpers:EasingDemoBoxControl.Ease>
+            </helpers:EasingDemoBoxControl>
+        </aristeus:GlassCard>
+
+        <TextBlock Classes="h3" Margin="0,30,0,0">AristeusEaseInOutBack</TextBlock>
+
+        <TextBlock Classes="h5" Margin="0,15,0,-5">Soft</TextBlock>
+        <aristeus:GlassCard HorizontalAlignment="Left" Padding="5">
+            <helpers:EasingDemoBoxControl HorizontalAlignment="Left">
+                <helpers:EasingDemoBoxControl.Ease>
+                    <animations:AristeusEaseInOutBack BounceIntensity="Soft" />
+                </helpers:EasingDemoBoxControl.Ease>
+            </helpers:EasingDemoBoxControl>
+        </aristeus:GlassCard>
+
+        <TextBlock Classes="h5" Margin="0,15,0,-5">Normal</TextBlock>
+        <aristeus:GlassCard HorizontalAlignment="Left" Padding="5">
+            <helpers:EasingDemoBoxControl HorizontalAlignment="Left">
+                <helpers:EasingDemoBoxControl.Ease>
+                    <animations:AristeusEaseInOutBack BounceIntensity="Normal" />
+                </helpers:EasingDemoBoxControl.Ease>
+            </helpers:EasingDemoBoxControl>
+        </aristeus:GlassCard>
+
+        <TextBlock Classes="h5" Margin="0,15,0,-5">Strong</TextBlock>
+        <aristeus:GlassCard HorizontalAlignment="Left" Padding="5">
+            <helpers:EasingDemoBoxControl HorizontalAlignment="Left">
+                <helpers:EasingDemoBoxControl.Ease>
+                    <animations:AristeusEaseInOutBack BounceIntensity="Strong" />
+                </helpers:EasingDemoBoxControl.Ease>
+            </helpers:EasingDemoBoxControl>
+        </aristeus:GlassCard>
+
+        <TextBlock Classes="h3" Margin="0,30,0,0">AristeusEaseOutBack</TextBlock>
+
+        <TextBlock Classes="h5" Margin="0,15,0,-5">Soft</TextBlock>
+        <aristeus:GlassCard HorizontalAlignment="Left" Padding="5">
+            <helpers:EasingDemoBoxControl HorizontalAlignment="Left">
+                <helpers:EasingDemoBoxControl.Ease>
+                    <animations:AristeusEaseOutBack BounceIntensity="Soft" />
+                </helpers:EasingDemoBoxControl.Ease>
+            </helpers:EasingDemoBoxControl>
+        </aristeus:GlassCard>
+
+        <TextBlock Classes="h5" Margin="0,15,0,-5">Normal</TextBlock>
+        <aristeus:GlassCard HorizontalAlignment="Left" Padding="5">
+            <helpers:EasingDemoBoxControl HorizontalAlignment="Left">
+                <helpers:EasingDemoBoxControl.Ease>
+                    <animations:AristeusEaseOutBack BounceIntensity="Normal" />
+                </helpers:EasingDemoBoxControl.Ease>
+            </helpers:EasingDemoBoxControl>
+        </aristeus:GlassCard>
+
+        <TextBlock Classes="h5" Margin="0,15,0,-5">Strong</TextBlock>
+        <aristeus:GlassCard HorizontalAlignment="Left" Padding="5">
+            <helpers:EasingDemoBoxControl HorizontalAlignment="Left">
+                <helpers:EasingDemoBoxControl.Ease>
+                    <animations:AristeusEaseOutBack BounceIntensity="Strong" />
+                </helpers:EasingDemoBoxControl.Ease>
+            </helpers:EasingDemoBoxControl>
+        </aristeus:GlassCard>
+
+        <TextBlock Classes="h3" Margin="0,30,0,0">AristeusEaseInOut</TextBlock>
+
+        <aristeus:GlassCard HorizontalAlignment="Left" Padding="5">
+            <helpers:EasingDemoBoxControl HorizontalAlignment="Left">
+                <helpers:EasingDemoBoxControl.Ease>
+                    <animations:AristeusEaseInOut />
+                </helpers:EasingDemoBoxControl.Ease>
+            </helpers:EasingDemoBoxControl>
+        </aristeus:GlassCard>
+
+
+
+
+
+
+        <Border Height="150" />
+    </StackPanel>
+</UserControl>
