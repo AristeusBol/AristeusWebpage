@@ -8,6 +8,7 @@ required_packages = [
     "torch",
     "timm",
     "transformers",
+    "torchao>=0.16.0",
     "peft",
     "pandas",
     "albumentations",

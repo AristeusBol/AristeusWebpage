@@ -3,6 +3,7 @@ import torch
 import os
 from transformers import AutoModel
 from peft import get_peft_model, LoraConfig
+from dataset import SCALES
 
 
 def load_lora_backbone(token=None):
@@ -50,12 +51,13 @@ class LocalMambaBlock(nn.Module):
 
     def forward(self, x):
         shortcut = x
+        B, N, D = x.shape
         x = self.norm(x)
         g = torch.sigmoid(self.gate(x))
         x = x * g
-        x = x.transpose(1, 2)  # -> (B, D, N)
+        x = x.transpose(1, 2)
         x = self.dwconv(x)
-        x = x.transpose(1, 2)  # -> (B, N, D)
+        x = x.transpose(1, 2)
         x = self.proj(x)
         x = self.drop(x)
         return shortcut + x
@@ -97,8 +99,8 @@ class RegressionHead(nn.Module):
         green = self.head_green_raw(x_pool)
         clover = self.head_clover_raw(x_pool)
         dead = self.head_dead_raw(x_pool)
-        gdm = green + clover
-        total = gdm + dead
+        gdm = (green * SCALES[0] + clover * SCALES[2]) / SCALES[3]
+        total = (green * SCALES[0] + clover * SCALES[2] + dead * SCALES[1]) / SCALES[4]
         return (
             green.squeeze(-1),
             dead.squeeze(-1),
@@ -128,16 +130,18 @@ class BiomassModel(nn.Module):
         x_cat = torch.cat([x_l, x_r], dim=1)
         return self.heads(x_cat, get_embed)
 
-    def get_all_values(self, total_pred, props):
+#    def get_all_values(self, total_pred, props):
         # Tính toán giá trị thành phần: Total * Proportion
-        green = total_pred * props[:, 0]
-        dead = total_pred * props[:, 1]
-        clover = total_pred * props[:, 2]
-        gdm = green + clover
-        return (
-            green.squeeze(-1),
-            dead.squeeze(-1),
-            clover.squeeze(-1),
-            gdm.squeeze(-1),
-            total_pred.squeeze(-1),
-        )
+#        green = total_pred * props[:, 0]
+#        dead = total_pred * props[:, 1]
+#        clover = total_pred * props[:, 2]
+#        gdm = green + clover
+#        return (
+#            green.squeeze(-1),
+#            dead.squeeze(-1),
+#            clover.squeeze(-1),
+#            gdm.squeeze(-1),
+#            total_pred.squeeze(-1),
+#        )
+
+

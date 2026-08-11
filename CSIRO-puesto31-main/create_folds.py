@@ -2,43 +2,42 @@ import pandas as pd
 import numpy as np
 import os
 import pathlib
-from sklearn.model_selection import StratifiedGroupKFold
+from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
 
 def create_folds(csv_path, output_dir, n_splits=5, seed=16999):
     df = pd.read_csv(csv_path)
     print(f"Loaded {len(df)} rows from {csv_path}")
 
-    # Following logic from preprocess.ipynb
-    # Targets: Dry_Green_g, Dry_Dead_g, Dry_Clover_g, GDM_g, Dry_Total_g
-    # We need a categorization for stratification
-    
-    # Create bins for Dry_Total_g
+    # Create quintiles for each target to use as multi-label stratification
+    # This ensures each fold has similar distribution of Green, Dead and Clover
+    for col in ["Dry_Green_g", "Dry_Dead_g", "Dry_Clover_g"]:
+        label = col.replace("Dry_", "").replace("_g", "_q")
+        df[label] = pd.qcut(df[col], q=5, labels=False, duplicates='drop')
+
+    # Multi-label targets: each quintile column acts as a label dimension
+    Y = df[["Green_q", "Dead_q", "Clover_q"]].values
+
+    # Species grouping for metadata (not used in stratification)
+    species_counts = df["Species"].value_counts()
+    rare = species_counts[species_counts < n_splits].index
+    df["strata"] = df["Species"].apply(lambda x: "Rare" if x in rare else x)
+
+    # Dry_Total_g bin for metadata
     if "Dry_Total_g" in df.columns:
         df["target_bin"] = pd.qcut(df["Dry_Total_g"], q=10, labels=False, duplicates='drop')
     else:
-        # Fallback if names are different
          cols = [c for c in df.columns if 'Total' in c]
          if cols:
              df["target_bin"] = pd.qcut(df[cols[0]], q=10, labels=False, duplicates='drop')
          else:
              df["target_bin"] = 0
 
-    # Stratification strata: Species + State + target_bin
-    df["strata"] = (
-        df["Species"].astype(str) + "_" + 
-        df["State"].astype(str) + "_" + 
-        df["target_bin"].astype(str)
-    )
-
-    # Groups: Sampling_Date (to avoid leakage within same date/location)
-    groups = df["Sampling_Date"].values
-    
-    sgkf = StratifiedGroupKFold(n_splits=n_splits, shuffle=True, random_state=seed)
+    mskf = MultilabelStratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
     
     output_path = pathlib.Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     
-    for fold, (train_idx, val_idx) in enumerate(sgkf.split(df, df["strata"], groups=groups)):
+    for fold, (train_idx, val_idx) in enumerate(mskf.split(df, Y)):
         fold_df = df.copy()
         # mark split
         fold_df["split"] = "train"

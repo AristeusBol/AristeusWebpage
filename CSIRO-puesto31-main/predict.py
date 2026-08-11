@@ -75,12 +75,41 @@ def main():
         for w_path in weights_files:
             try:
                 model = BiomassModel()
-                model.load_state_dict(torch.load(w_path, map_location=device))
+                state_dict = torch.load(w_path, map_location=device)
+
+                # PEFT adapter name mismatch fix: checkpoint keys may lack '.default.'
+                # e.g. lora_A.weight -> lora_A.default.weight
+                replacements = [
+                    "lora_A.weight",
+                    "lora_B.weight",
+                    "lora_magnitude_vector.weight",
+                ]
+                new_state_dict = {}
+                for key, value in state_dict.items():
+                    new_key = key
+                    for suffix in replacements:
+                        old_suffix = suffix
+                        new_suffix = suffix.replace(".weight", ".default.weight")
+                        if new_key.endswith(old_suffix):
+                            prefix = new_key[: -len(old_suffix)]
+                            new_key = prefix + new_suffix
+                            break
+                    new_state_dict[new_key] = value
+
+                fixed_state_dict = {}
+                for key, value in new_state_dict.items():
+                    if key.startswith("backbone.base_model.model.layer"):
+                        key = key.replace(
+                            "backbone.base_model.model.layer",
+                            "backbone.base_model.model.model.layer", 1
+                        )
+                    fixed_state_dict[key] = value
+                new_state_dict = fixed_state_dict
+
+                model.load_state_dict(new_state_dict, strict=False)
                 model.to(device)
                 model.eval()
                 models.append(model)
-                print(f"Loaded {w_path}")
-            except Exception as e:
                 print(f"Loaded {w_path}")
             except Exception as e:
                 print(f"Failed to load {w_path}: {e}")
@@ -136,7 +165,7 @@ def main():
                 p1 = model(img0, img1)
                 
                 # Simple TTA: Flip
-                p2 = model(torch.flip(img1, [-1]), torch.flip(img0, [-1]))
+                p2 = model(torch.flip(img0, [-1]), torch.flip(img1, [-1]))
                 
                 # Average TTA
                 # p1 is list of tensors? or tensor?
