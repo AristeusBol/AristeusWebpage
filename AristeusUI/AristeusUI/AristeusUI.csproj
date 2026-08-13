@@ -3,6 +3,7 @@
   <PropertyGroup>
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <IsTrimmable>true</IsTrimmable>
+    <LangVersion>12</LangVersion>
     <TargetFramework>net8.0</TargetFramework>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <RootNamespace>AristeusUI</RootNamespace>

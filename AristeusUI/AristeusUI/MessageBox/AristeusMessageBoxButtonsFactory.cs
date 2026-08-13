@@ -36,7 +36,8 @@ public static class AristeusMessageBoxButtonsFactory
 
         if (!string.IsNullOrWhiteSpace(classes))
         {
-            var split = classes!.Split([' '], StringSplitOptions.RemoveEmptyEntries);
+            ///var split = classes!.Split([' '], StringSplitOptions.RemoveEmptyEntries);
+            var split = classes!.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             button.Classes.AddRange(split);
         }
         button.Classes.Add("MessageBoxAction");

@@ -76,7 +76,9 @@ public static class EnumExtensions
     /// <remarks>For enums with <see cref="FlagsAttribute"/>.<br/>
     /// If you have an enum value set to 0 it will always return. (Filter it before or after calling this function)<br/>
     /// If you have negative value it can return all flags as undesired effect.</remarks>
-    public static IEnumerable<T> GetSetFlagsIgnoring<T>(this T flags, params IEnumerable<T> ignoreFlags) where T : Enum
+    ///public static IEnumerable<T> GetSetFlagsIgnoring<T>(this T flags, params IEnumerable<T> ignoreFlags) where T : Enum
+    /// 
+    public static IEnumerable<T> GetSetFlagsIgnoring<T>(this T flags, params T[] ignoreFlags) where T : Enum
     {
         var flagsInt64 = Convert.ToInt64(flags);
 
