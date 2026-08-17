@@ -9,6 +9,7 @@ def setup_logging(save_dir: Path, level=logging.DEBUG):
 
     logger = logging.getLogger("biomass")
     logger.setLevel(level)
+    logger.handlers.clear()
 
     fmt = logging.Formatter(
         "%(asctime)s | %(levelname)-8s | %(message)s",

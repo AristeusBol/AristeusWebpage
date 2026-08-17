@@ -4,7 +4,7 @@ import os
 def download_backbone(token=None):
     model_name = "facebook/dinov3-vitl16-pretrain-lvd1689m"
     if token is None:
-        token = os.getenv("HF_TOKEN", True)
+        token = os.getenv("HF_TOKEN")
     
     save_dir = "./backbone_weights"
     os.makedirs(save_dir, exist_ok=True)
