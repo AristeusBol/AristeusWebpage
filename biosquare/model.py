@@ -1,9 +1,10 @@
 import torch.nn as nn
 import torch
+import torch.nn.functional as F
 import os
 from transformers import AutoModel
 from peft import get_peft_model, LoraConfig
-from dataset import SCALES
+from dataset import DEFAULT_SCALES
 
 
 def load_lora_backbone(token=None):
@@ -15,8 +16,8 @@ def load_lora_backbone(token=None):
         model = AutoModel.from_pretrained(local_path)
     else:
         if token is None:
-            token = os.getenv("HF_TOKEN", True) 
-        print(f"Loading backbone from Hugging Face: {model_name}")
+            token = os.getenv("HF_TOKEN")
+            print(f"Loading backbone from Hugging Face: {model_name}")
         model = AutoModel.from_pretrained(
             model_name,
             token=token
@@ -32,10 +33,6 @@ def load_lora_backbone(token=None):
     )
     lora_model = get_peft_model(model, peft_config)
     return lora_model
-
-def save_checkpoint(checkpoint_path, model):
-    st = model.state_dict()
-    torch.save(st, checkpoint_path)
 
 
 class LocalMambaBlock(nn.Module):
@@ -63,6 +60,15 @@ class LocalMambaBlock(nn.Module):
         return shortcut + x
 
 
+class PositiveActivation(nn.Module):
+    def __init__(self, floor=0.001):
+        super().__init__()
+        self.floor = floor
+
+    def forward(self, x):
+        return F.elu(x) + 1.0 + self.floor
+
+
 class RegressionHead(nn.Module):
     def __init__(self, dim):
         super().__init__()
@@ -76,72 +82,40 @@ class RegressionHead(nn.Module):
             nn.GELU(),
             nn.Dropout(0.2),
             nn.Linear(dim // 2, 1),
-            nn.Softplus(),
-        )
-        self.head_clover_raw = nn.Sequential(
-            nn.Linear(dim, dim // 2),
-            nn.GELU(),
-            nn.Dropout(0.2),
-            nn.Linear(dim // 2, 1),
-            nn.Softplus(),
+            PositiveActivation(),
         )
         self.head_dead_raw = nn.Sequential(
             nn.Linear(dim, dim // 2),
             nn.GELU(),
             nn.Dropout(0.2),
             nn.Linear(dim // 2, 1),
-            nn.Softplus(),
+            PositiveActivation(),
         )
 
-    def forward(self, x, get_embed=False):
+    def forward(self, x):
         x_fused = self.fusion(x)
         x_pool = self.pool(x_fused.transpose(1, 2)).flatten(1)
         green = self.head_green_raw(x_pool)
-        clover = self.head_clover_raw(x_pool)
         dead = self.head_dead_raw(x_pool)
-        gdm = (green * SCALES[0] + clover * SCALES[2]) / SCALES[3]
-        total = (green * SCALES[0] + clover * SCALES[2] + dead * SCALES[1]) / SCALES[4]
         return (
             green.squeeze(-1),
             dead.squeeze(-1),
-            clover.squeeze(-1),
-            gdm.squeeze(-1),
-            total.squeeze(-1),
         )
 
 
 class BiomassModel(nn.Module):
-    def __init__(self, token=None):
+    def __init__(self, token=None, img_size=1024, patch_size=16):
         super().__init__()
+        if img_size % patch_size != 0:
+            raise ValueError(f"img_size ({img_size}) must be divisible by patch_size ({patch_size})")
+        self.img_size = img_size
+        self.patch_size = patch_size
+        self.register_buffer("scales", DEFAULT_SCALES.clone())
         self.backbone = load_lora_backbone(token=token)
-        # self.backbone = load_convnet_backbone()
         nf = self.backbone.config.hidden_size
-        # nf = self.backbone.config.hidden_sizes[-1]
         self.heads = RegressionHead(nf)
+        self.num_prefix = 1 + self.backbone.config.num_register_tokens
 
-    def forward(
-        self,
-        left,
-        right,
-        get_embed=False,
-    ):
-        x_l = self.backbone(left).last_hidden_state[:, -1024:]  #
-        x_r = self.backbone(right).last_hidden_state[:, -1024:]  # -1024
-        x_cat = torch.cat([x_l, x_r], dim=1)
-        return self.heads(x_cat, get_embed)
-
-#    def get_all_values(self, total_pred, props):
-        # Tính toán giá trị thành phần: Total * Proportion
-#        green = total_pred * props[:, 0]
-#        dead = total_pred * props[:, 1]
-#        clover = total_pred * props[:, 2]
-#        gdm = green + clover
-#        return (
-#            green.squeeze(-1),
-#            dead.squeeze(-1),
-#            clover.squeeze(-1),
-#            gdm.squeeze(-1),
-#            total_pred.squeeze(-1),
-#        )
-
-
+    def forward(self, img):
+        x = self.backbone(img).last_hidden_state[:, self.num_prefix:]
+        return self.heads(x)

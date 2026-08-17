@@ -10,7 +10,7 @@ class TweedieLoss(nn.Module):
         self.epsilon = epsilon
 
     def forward(self, pred, target):
-        pred = pred + self.epsilon
+        pred = pred.clamp(min=self.epsilon)
         # L = -target * (pred^(1-p) / (1-p)) + (pred^(2-p) / (2-p))
         term1 = -target * torch.pow(pred, 1 - self.p) / (1 - self.p)
         term2 = torch.pow(pred, 2 - self.p) / (2 - self.p)
@@ -19,15 +19,13 @@ class TweedieLoss(nn.Module):
 class BiomassLoss(nn.Module):
     def __init__(self, device=torch.device("cpu")):
         super().__init__()
-        self.weights = torch.tensor([1/3, 1/3, 1/3]).to(device=device)
+        self.weights = torch.tensor([0.4, 0.6]).to(device=device)
         self.loss = TweedieLoss(p=1.2)
        
     def forward(self, outputs, labels):
-        green, dead, clover, gdm, total = outputs
+        green, dead = outputs
         # Cast predictions and labels to float32 for stable TweedieLoss calculation
         l_green  = self.loss(green.to(torch.float32), labels[:, 0].to(torch.float32))
         l_dead   = self.loss(dead.to(torch.float32), labels[:, 1].to(torch.float32))
-        l_clover = self.loss(clover.to(torch.float32), labels[:, 2].to(torch.float32))
-        losses = torch.stack([l_green, l_dead, l_clover])
+        losses = torch.stack([l_green, l_dead])
         return (losses * self.weights).sum(), losses
-    
