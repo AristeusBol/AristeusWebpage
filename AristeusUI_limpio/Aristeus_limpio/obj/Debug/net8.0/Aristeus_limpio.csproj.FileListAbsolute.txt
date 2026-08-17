@@ -1,0 +1,8 @@
+/home/richard/Escritorio/Aval/GrassGauge/AristeusUI_limpio/Aristeus_limpio/obj/Debug/net8.0/Aristeus_limpio.csproj.AssemblyReference.cache
+/home/richard/Escritorio/Aval/GrassGauge/AristeusUI_limpio/Aristeus_limpio/obj/Debug/net8.0/Avalonia/Resources.Inputs.cache
+/home/richard/Escritorio/Aval/GrassGauge/AristeusUI_limpio/Aristeus_limpio/obj/Debug/net8.0/Avalonia/resources
+/home/richard/Escritorio/Aval/GrassGauge/AristeusUI_limpio/Aristeus_limpio/obj/Debug/net8.0/Aristeus_limpio.GeneratedMSBuildEditorConfig.editorconfig
+/home/richard/Escritorio/Aval/GrassGauge/AristeusUI_limpio/Aristeus_limpio/obj/Debug/net8.0/Aristeus_limpio.AssemblyInfoInputs.cache
+/home/richard/Escritorio/Aval/GrassGauge/AristeusUI_limpio/Aristeus_limpio/obj/Debug/net8.0/Aristeus_limpio.AssemblyInfo.cs
+/home/richard/Escritorio/Aval/GrassGauge/AristeusUI_limpio/Aristeus_limpio/obj/Debug/net8.0/Aristeus_limpio.csproj.CoreCompileInputs.cache
+/home/richard/Escritorio/Aval/GrassGauge/AristeusUI_limpio/Aristeus_limpio/obj/Debug/net8.0/Aristeus_limpio.sourcelink.json
