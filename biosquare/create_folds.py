@@ -1,62 +1,53 @@
 import pandas as pd
-import numpy as np
 import os
 import pathlib
-from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
+from sklearn.model_selection import KFold
+
+TARGET_MAP = {
+    "Dry_Green_g": "materia verde seca por m2",
+    "Dry_Dead_g": "materia muerta seca por m2",
+}
+
+def read_csv_any_encoding(path):
+    for enc in ["utf-8", "latin-1"]:
+        try:
+            return pd.read_csv(path, encoding=enc)
+        except UnicodeDecodeError:
+            continue
+    raise ValueError(f"Could not read {path} with utf-8 or latin-1")
 
 def create_folds(csv_path, output_dir, n_splits=5, seed=16999):
-    df = pd.read_csv(csv_path)
+    df = read_csv_any_encoding(csv_path)
     print(f"Loaded {len(df)} rows from {csv_path}")
 
-    # Create quintiles for each target to use as multi-label stratification
-    # This ensures each fold has similar distribution of Green, Dead and Clover
-    for col in ["Dry_Green_g", "Dry_Dead_g", "Dry_Clover_g"]:
-        label = col.replace("Dry_", "").replace("_g", "_q")
-        df[label] = pd.qcut(df[col], q=5, labels=False, duplicates='drop')
+    fold_df = df.copy()
+    fold_df["id"] = fold_df["Id"]
+    for target, src in TARGET_MAP.items():
+        if src not in fold_df.columns:
+            raise KeyError(f"Column '{src}' not found in {csv_path}")
+        fold_df[target] = fold_df[src]
 
-    # Multi-label targets: each quintile column acts as a label dimension
-    Y = df[["Green_q", "Dead_q", "Clover_q"]].values
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=seed)
 
-    # Species grouping for metadata (not used in stratification)
-    species_counts = df["Species"].value_counts()
-    rare = species_counts[species_counts < n_splits].index
-    df["strata"] = df["Species"].apply(lambda x: "Rare" if x in rare else x)
-
-    # Dry_Total_g bin for metadata
-    if "Dry_Total_g" in df.columns:
-        df["target_bin"] = pd.qcut(df["Dry_Total_g"], q=10, labels=False, duplicates='drop')
-    else:
-         cols = [c for c in df.columns if 'Total' in c]
-         if cols:
-             df["target_bin"] = pd.qcut(df[cols[0]], q=10, labels=False, duplicates='drop')
-         else:
-             df["target_bin"] = 0
-
-    mskf = MultilabelStratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
-    
     output_path = pathlib.Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
-    
-    for fold, (train_idx, val_idx) in enumerate(mskf.split(df, Y)):
-        fold_df = df.copy()
-        # mark split
-        fold_df["split"] = "train"
-        fold_df.loc[val_idx, "split"] = "val"
-        
-        # In train.py it expects "split" column to distinguish
+
+    for fold, (train_idx, val_idx) in enumerate(kf.split(fold_df)):
+        out = fold_df.copy()
+        out["split"] = "train"
+        out.loc[val_idx, "split"] = "val"
         out_name = output_path / f"fold_{fold}.csv"
-        fold_df.to_csv(out_name, index=False)
+        keep = ["id"] + list(TARGET_MAP.keys()) + ["split"]
+        out[keep].to_csv(out_name, index=False)
         print(f"Created {out_name} (Train: {len(train_idx)}, Val: {len(val_idx)})")
 
 if __name__ == "__main__":
-    # Use the train_wide.csv generated earlier
-    train_wide_path = "train_wide.csv"
-    if not os.path.exists(train_wide_path):
-        # search in current or parent
-        if os.path.exists("../train_wide.csv"):
-            train_wide_path = "../train_wide.csv"
+    train_gg_path = "data/raw/train_wide.csv"
+    if not os.path.exists(train_gg_path):
+        if os.path.exists("../data/raw/train_wide.csv"):
+            train_gg_path = "../data/raw/train_wide.csv"
         else:
-            print("Error: train_wide.csv not found. Run prepare_data.py first.")
+            print("Error: data/raw/train_wide.csv not found.")
             exit(1)
-            
-    create_folds(train_wide_path, "./datasets/fold_news1")
+
+    create_folds(train_gg_path, "./data/folds/folds_v1")

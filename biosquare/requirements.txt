@@ -1,0 +1,10 @@
+torch>=2.1
+timm
+transformers
+peft
+pandas
+numpy
+scikit-learn
+albumentations
+opencv-python
+tqdm
