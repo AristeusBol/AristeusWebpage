@@ -1,0 +1,287 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:content="clr-namespace:AristeusUI.Content"
+                    xmlns:controls="clr-namespace:AristeusUI.Controls"
+                    xmlns:converters="clr-namespace:Avalonia.Controls.Converters;assembly=Avalonia.Controls"
+                    xmlns:system="clr-namespace:System;assembly=netstandard">
+    <converters:PlatformKeyGestureConverter x:Key="KeyGestureConverter" />
+
+    <Design.PreviewWith>
+        <Border MinWidth="600"
+                MinHeight="400"
+                Margin="20">
+            <Menu VerticalAlignment="Top">
+                <MenuItem Header="File">
+                    <MenuItem Header="Open"
+                              Icon="🗎"
+                              InputGesture="Ctrl + O">
+                        <MenuItem Header="Recent file 1" Icon="🗎" />
+                        <MenuItem Header="Recent file 2" Icon="🗎" />
+                        <MenuItem Header="Recent file 3" Icon="🗎" />
+                        <MenuItem Header="Recent file 4" Icon="🗎" />
+                        <Separator />
+                        <MenuItem Header="Clear recent files"
+                                  Icon="🗙"
+                                  InputGesture="Ctrl + Alt + O" />
+                    </MenuItem>
+                    <MenuItem Header="Save"
+                              Icon="💾"
+                              InputGesture="Ctrl + S" />
+                    <MenuItem Header="Fullscreen"
+                              HotKey="F11"
+                              Icon="⛶"
+                              InputGesture="F11" />
+                    <MenuItem Header="Close"
+                              Icon="🗙"
+                              InputGesture="Alt + F4" />
+                </MenuItem>
+
+                <MenuItem Header="View">
+                    <MenuItem Header="Grid options">
+                        <MenuItem Header="Show grid lines" />
+                        <MenuItem Header="Show grid separator" />
+                        <MenuItem Header="Show grid " />
+                    </MenuItem>
+                    <MenuItem Header="Title bar" />
+                </MenuItem>
+
+                <MenuItem Header="Help">
+                    <MenuItem ToggleType="CheckBox"
+                              Icon="ℹ️"
+                              IsChecked="True"
+                              Name="MenuItemAbout" Header="About" />
+                    <Separator />
+                    <MenuItem ToggleType="Radio"
+                              Icon="🌐"
+                              Header="Website" />
+                    <MenuItem ToggleType="Radio"
+                              IsChecked="True"
+                              Icon="🗣"
+                              Header="Discussions" />
+                    <MenuItem ToggleType="Radio"
+                              Icon="🎁"
+                              Header="Donate" />
+                    <MenuItem Header="Blank" />
+                </MenuItem>
+            </Menu>
+        </Border>
+    </Design.PreviewWith>
+
+    <ControlTheme x:Key="AristeusMenuItemStyle" TargetType="MenuItem">
+
+        <Setter Property="Background" Value="{DynamicResource AristeusBackground}" />
+        <Setter Property="BorderThickness" Value="1.5" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="Foreground" Value="{DynamicResource AristeusText}" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Name="root"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        ClipToBounds="True">
+                    <Panel>
+                        <Grid Margin="5,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"
+                                                  SharedSizeGroup="CheckToggle" />
+                                <ColumnDefinition Width="Auto"
+                                                  SharedSizeGroup="MenuItemIcon" />
+                                <ColumnDefinition Width="Auto"
+                                                  SharedSizeGroup="MenuItemSeparator" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto"
+                                                  SharedSizeGroup="MenuItemIGT" />
+                                <ColumnDefinition Width="Auto"
+                                                  SharedSizeGroup="MenuItemChevron" />
+                            </Grid.ColumnDefinitions>
+
+
+                            <CheckBox Grid.Column="0" Name="PART_CheckBox"
+                                      Margin="5,0,0,0"
+                                      IsChecked="{TemplateBinding IsChecked, Mode=TwoWay}"
+                                      IsVisible="False" />
+
+                            <RadioButton Grid.Column="0"
+                                         Name="PART_RadioButton"
+                                         Margin="5,0,0,0"
+                                         IsChecked="{TemplateBinding IsChecked, Mode=TwoWay}"
+                                         GroupName="{TemplateBinding GroupName}"
+                                         IsVisible="False" />
+
+                            <ContentPresenter Grid.Column="1"
+                                              Name="PART_IconPresenter"
+                                              MinHeight="16"
+                                              MinWidth="16"
+                                              Margin="5,0,0,0"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              IsVisible="False"
+                                              Content="{TemplateBinding Icon}" />
+
+                            <Rectangle Grid.Column="2"
+                                       Name="PART_HorizontalSeparator"
+                                       Width="2"
+                                       Margin="10,0,5,-2"
+                                       Fill="{DynamicResource AristeusLightBorderBrush}">
+                                <Rectangle.IsVisible>
+                                    <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                                        <Binding Path="#PART_IconPresenter.IsVisible"
+                                                 RelativeSource="{RelativeSource TemplatedParent}" />
+                                        <Binding Path="#PART_CheckBox.IsVisible"
+                                                 RelativeSource="{RelativeSource TemplatedParent}" />
+                                        <Binding Path="#PART_RadioButton.IsVisible"
+                                                 RelativeSource="{RelativeSource TemplatedParent}" />
+                                    </MultiBinding>
+                                </Rectangle.IsVisible>
+                            </Rectangle>
+
+                            <ContentPresenter Grid.Column="3"
+                                              Name="PART_HeaderPresenter"
+                                              Margin="5,0"
+                                              HorizontalAlignment="Left"
+                                              VerticalAlignment="Center"
+                                              Content="{TemplateBinding Header}">
+                                <ContentPresenter.DataTemplates>
+                                    <DataTemplate DataType="system:String">
+                                        <TextBlock FontWeight="{DynamicResource DefaultDemiBold}" Text="{Binding}" />
+                                    </DataTemplate>
+                                </ContentPresenter.DataTemplates>
+                            </ContentPresenter>
+
+                            <TextBlock Grid.Column="4"
+                                       Name="PART_InputGestureText"
+                                       Margin="20,0,0,0"
+                                       VerticalAlignment="Center"
+                                       DockPanel.Dock="Right"
+                                       Foreground="{DynamicResource AristeusMuteText}"
+                                       IsVisible="{Binding InputGesture, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                       Text="{TemplateBinding InputGesture, Converter={StaticResource KeyGestureConverter}}" />
+
+                            <Border Grid.Column="5"
+                                    Width="24">
+                                <PathIcon Name="PART_RightArrow"
+                                          Width="8"
+                                          Height="8"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          Classes="Flippable"
+                                          Data="{x:Static content:Icons.ChevronRight}"
+                                          Foreground="{DynamicResource AristeusText}" />
+                            </Border>
+
+                        </Grid>
+
+                        <Popup Name="PART_Popup"
+                               ClipToBounds="True"
+                               HorizontalOffset="-25"
+                               IsLightDismissEnabled="False"
+                               IsOpen="{TemplateBinding IsSubMenuOpen, Mode=TwoWay}"
+                               Opacity="0"
+                               OverlayInputPassThroughElement="{Binding $parent[MenuItem]}"
+                               Placement="RightEdgeAlignedTop"
+                               VerticalOffset="-1">
+                            <LayoutTransformControl Name="PART_LayoutTransform" RenderTransformOrigin="0%, 0%">
+                                <Panel Margin="0,-8,0,0">
+                                    <Border Margin="16,8,8,8"
+                                            BoxShadow="{DynamicResource AristeusPopupShadow}"
+                                            CornerRadius="6" />
+
+                                    <Border Name="PART_Border"
+                                            Margin="16,8,8,8"
+                                            Background="{DynamicResource AristeusCardBackground}"
+                                            BorderBrush="{DynamicResource AristeusMenuBorderBrush}"
+                                            BorderThickness="1"
+                                            BoxShadow="{DynamicResource AristeusPopupShadow}"
+                                            ClipToBounds="True"
+                                            CornerRadius="5">
+                                        <Panel Background="{DynamicResource PopupGradientBrush}">
+                                            <ScrollViewer>
+                                                <ItemsPresenter Name="PART_ItemsPresenter" ItemsPanel="{TemplateBinding ItemsPanel}" />
+                                            </ScrollViewer>
+                                        </Panel>
+                                    </Border>
+                                </Panel>
+                            </LayoutTransformControl>
+                        </Popup>
+                    </Panel>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+
+        <Style Selector="^:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AristeusLightBorderBrush}" />
+        </Style>
+
+        <Style Selector="^:open /template/ LayoutTransformControl#PART_LayoutTransform">
+            <Style.Animations>
+                <Animation Easing="{StaticResource MenuEasing}"
+                           FillMode="Forward"
+                           Duration="0:0:0.3">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="ScaleTransform.ScaleY" Value="0.92" />
+                        <Setter Property="ScaleTransform.ScaleX" Value="0.92" />
+
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="ScaleTransform.ScaleY" Value="1" />
+                        <Setter Property="ScaleTransform.ScaleX" Value="1" />
+                    </KeyFrame>
+                </Animation>
+                <Animation FillMode="Forward" Duration="0:0:0.25">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Opacity" Value="0" />
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Opacity" Value="1" />
+                    </KeyFrame>
+                </Animation>
+
+            </Style.Animations>
+        </Style>
+
+        <Style Selector="^:selected /template/ Border#root">
+            <Setter Property="Background" Value="{DynamicResource AristeusLightBorderBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AristeusLightBorderBrush}" />
+        </Style>
+
+        <Style Selector="^:disabled">
+            <Setter Property="Opacity" Value="{DynamicResource ThemeDisabledOpacity}" />
+        </Style>
+
+        <Style Selector="^:icon /template/ ContentPresenter#PART_IconPresenter">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
+
+        <Style Selector="^:not(.Menu):disabled">
+            <Setter Property="Opacity" Value="{DynamicResource ThemeDisabledOpacity}" />
+        </Style>
+
+        <Style Selector="^:empty /template/ PathIcon#PART_RightArrow">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+
+        <Style Selector="^:separator">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Separator Margin="0" />
+                </ControlTemplate>
+            </Setter>
+        </Style>
+
+        <Style Selector="^[ToggleType=CheckBox] /template/ CheckBox#PART_CheckBox">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
+
+        <Style Selector="^[ToggleType=Radio] /template/ RadioButton#PART_RadioButton">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
+
+        <Style Selector="^[FlowDirection=RightToLeft] /template/ Popup#PART_Popup">
+            <Setter Property="HorizontalOffset" Value="25" />
+        </Style>
+    </ControlTheme>
+    <ControlTheme x:Key="{x:Type MenuItem}"
+                  BasedOn="{StaticResource AristeusMenuItemStyle}"
+                  TargetType="MenuItem" />
+</ResourceDictionary>
