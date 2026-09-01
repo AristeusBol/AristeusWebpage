@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgis/postgis:15-3.4
+    container_name: foragemap_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin_forage}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password_local_123}
+      POSTGRES_DB: ${POSTGRES_DB:-foragemap}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+      - ./init_db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin_forage} -d ${POSTGRES_DB:-foragemap}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ..
+      dockerfile: infraestructura/Dockerfile
+    container_name: foragemap_api
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin_forage}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password_local_123}
+      POSTGRES_DB: ${POSTGRES_DB:-foragemap}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production-please}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  postgis_data:
