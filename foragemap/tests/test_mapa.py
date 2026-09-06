@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from jose import jwt
 
 from api.main import app
+from tests.conftest import auth_headers
 from core.config import ALGORITHM, SECRET_KEY
 
 client = TestClient(app)
@@ -21,11 +22,11 @@ def _mock_mvt_engine(mvt_bytes):
 def test_mapa_tile_ok():
     eng, conn = _mock_mvt_engine(b"\x1a\x05densidad")
     with patch("api.routers.mapa.engine", eng):
-        resp = client.get("/api/mapa/tiles/10/500/500.pbf?finca=La%20Esperanza&fecha=2024-04-01&tipo_densidad=verde&usuario_id=1")
+        resp = client.get("/api/mapa/tiles/10/500/500.pbf?finca=La%20Esperanza&fecha=2024-04-01&tipo_densidad=verde", headers=auth_headers(1))
     assert resp.status_code == 200
     assert resp.headers["content-type"] == "application/x-protobuf"
     assert resp.content == b"\x1a\x05densidad"
-    assert resp.headers["Cache-Control"] == "public, max-age=86400"
+    assert resp.headers["Cache-Control"] == "private, max-age=300"
     sql = str(conn.execute.call_args[0][0])
     assert "ST_AsMVT" in sql
     assert "ST_AsMVTGeom" in sql
@@ -41,13 +42,13 @@ def test_mapa_tile_tipos_densidad_whitelist():
     for tipo, columna in [("verde", "densidad_verde_g_m2"), ("muerta", "densidad_muerta_g_m2"), ("total", "densidad_total_g_m2")]:
         eng, conn = _mock_mvt_engine(b"tile")
         with patch("api.routers.mapa.engine", eng):
-            resp = client.get(f"/api/mapa/tiles/5/1/1.pbf?finca=F&fecha=2024-04-01&tipo_densidad={tipo}&usuario_id=1")
+            resp = client.get(f"/api/mapa/tiles/5/1/1.pbf?finca=F&fecha=2024-04-01&tipo_densidad={tipo}", headers=auth_headers(1))
         assert resp.status_code == 200
         assert columna in str(conn.execute.call_args[0][0])
 
 
 def test_mapa_tile_tipo_invalido_400():
-    resp = client.get("/api/mapa/tiles/5/1/1.pbf?finca=F&fecha=2024-04-01&tipo_densidad=invalido&usuario_id=1")
+    resp = client.get("/api/mapa/tiles/5/1/1.pbf?finca=F&fecha=2024-04-01&tipo_densidad=invalido", headers=auth_headers(1))
     assert resp.status_code == 400
     assert "tipo_densidad" in resp.json()["detail"]
 
@@ -55,7 +56,7 @@ def test_mapa_tile_tipo_invalido_400():
 def test_mapa_tile_vacio_200_empty():
     eng, _ = _mock_mvt_engine(None)
     with patch("api.routers.mapa.engine", eng):
-        resp = client.get("/api/mapa/tiles/10/1/1.pbf?finca=Vacia&fecha=2024-04-01&tipo_densidad=total&usuario_id=1")
+        resp = client.get("/api/mapa/tiles/10/1/1.pbf?finca=Vacia&fecha=2024-04-01&tipo_densidad=total", headers=auth_headers(1))
     assert resp.status_code == 200
     assert resp.content == b""
     assert resp.headers["content-type"] == "application/x-protobuf"
@@ -64,7 +65,7 @@ def test_mapa_tile_vacio_200_empty():
 def test_mapa_tile_memoryview():
     eng, _ = _mock_mvt_engine(memoryview(b"tile-mem"))
     with patch("api.routers.mapa.engine", eng):
-        resp = client.get("/api/mapa/tiles/8/10/10.pbf?finca=F&fecha=2024-04-01&tipo_densidad=verde&usuario_id=1")
+        resp = client.get("/api/mapa/tiles/8/10/10.pbf?finca=F&fecha=2024-04-01&tipo_densidad=verde", headers=auth_headers(1))
     assert resp.content == b"tile-mem"
 
 
@@ -84,7 +85,7 @@ def test_mapa_tile_sin_auth_401():
 def test_mapa_tile_sqli_protegido():
     eng, conn = _mock_mvt_engine(b"tile")
     with patch("api.routers.mapa.engine", eng):
-        client.get("/api/mapa/tiles/8/10/10.pbf?finca=F'; DROP TABLE--&fecha=2024-04-01&tipo_densidad=verde&usuario_id=1")
+        client.get("/api/mapa/tiles/8/10/10.pbf?finca=F'; DROP TABLE--&fecha=2024-04-01&tipo_densidad=verde", headers=auth_headers(1))
     sql = str(conn.execute.call_args[0][0])
     assert "DROP TABLE" not in sql
     assert conn.execute.call_args[0][1]["finca"] == "F'; DROP TABLE--"
@@ -99,7 +100,7 @@ def test_mapa_geojson_ok():
         MagicMock(id=2, geom_json={"type": "Point", "coordinates": [-60.1, -30.1]}, valor=200),
     ]
     with patch("api.routers.mapa.engine", mock_engine):
-        resp = client.get("/api/mapa/geojson?finca=La%20Esperanza&fecha=2024-04-01&tipo_densidad=muerta&usuario_id=1")
+        resp = client.get("/api/mapa/geojson?finca=La%20Esperanza&fecha=2024-04-01&tipo_densidad=muerta", headers=auth_headers(1))
     assert resp.status_code == 200
     data = resp.json()
     assert data["type"] == "FeatureCollection"
@@ -119,24 +120,25 @@ def test_mapa_geojson_limit_warning():
     rows = [MagicMock(id=i, geom_json={"type": "Point", "coordinates": [0,0]}, valor=10) for i in range(5)]
     mock_conn.execute.return_value.fetchall.return_value = rows
     with patch("api.routers.mapa.engine", mock_engine):
-        resp = client.get("/api/mapa/geojson?finca=F&fecha=2024-04-01&tipo_densidad=verde&usuario_id=1&limit=5")
+        resp = client.get("/api/mapa/geojson?finca=F&fecha=2024-04-01&tipo_densidad=verde&limit=5", headers=auth_headers(1))
     assert resp.json()["metadata"]["warning"] is not None
     assert "preferir /tiles" in resp.json()["metadata"]["warning"]
 
 
 def test_mapa_geojson_tipo_invalido():
-    resp = client.get("/api/mapa/geojson?finca=F&fecha=2024-04-01&tipo_densidad=azul&usuario_id=1")
+    resp = client.get("/api/mapa/geojson?finca=F&fecha=2024-04-01&tipo_densidad=azul", headers=auth_headers(1))
     assert resp.status_code == 400
 
 
 def test_mapa_geojson_solo_una_columna():
+    """Verifica que solo se selecciona la columna pedida, no las 3, para reducir payload"""
     for tipo, col in [("verde","densidad_verde_g_m2"),("muerta","densidad_muerta_g_m2"),("total","densidad_total_g_m2")]:
         mock_conn = MagicMock()
         mock_engine = MagicMock()
         mock_engine.connect.return_value.__enter__.return_value = mock_conn
         mock_conn.execute.return_value.fetchall.return_value = []
         with patch("api.routers.mapa.engine", mock_engine):
-            client.get(f"/api/mapa/geojson?finca=F&fecha=2024-04-01&tipo_densidad={tipo}&usuario_id=1")
+            client.get(f"/api/mapa/geojson?finca=F&fecha=2024-04-01&tipo_densidad={tipo}", headers=auth_headers(1))
         sql = str(mock_conn.execute.call_args[0][0])
         assert col in sql
         otras = [c for c in ["densidad_verde_g_m2","densidad_muerta_g_m2","densidad_total_g_m2"] if c != col]

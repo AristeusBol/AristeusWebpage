@@ -1,19 +1,22 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from core.config import CORS_ORIGINS
-from api.routers import auth, dashboard, filtros, mapa
+from api.routers import auth, calibracion, dashboard, filtros, mapa, potreros
+from api.routers.calibracion import UPLOAD_DIR
 
 app = FastAPI(
-    title="ForageMap API - Auth",
-    description="API mínima: registro y login (solo correo y contraseña)",
+    title="ForageMap API",
+    description="Motor analítico espacial y forrajero: auth, filtros, mapa vectorial, dashboard y calibración",
     version="1.0.0",
 )
 
+_WILDCARD_CORS = len(CORS_ORIGINS) == 1 and CORS_ORIGINS[0] == "*"
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS,
-    allow_credentials=True,
+    allow_origins=CORS_ORIGINS if not _WILDCARD_CORS else ["*"],
+    allow_credentials=not _WILDCARD_CORS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -22,15 +25,26 @@ app.include_router(auth.router)
 app.include_router(filtros.router)
 app.include_router(mapa.router)
 app.include_router(dashboard.router)
+app.include_router(potreros.router)
+app.include_router(calibracion.router)
+
+try:
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+except OSError:
+    pass
+if UPLOAD_DIR.exists():
+    app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 
 @app.get("/", tags=["health"])
 def health():
+    """Estado del servicio."""
     return {"status": "ok", "service": "foragemap-auth", "version": "1.0.0"}
 
 
 @app.get("/health", tags=["health"])
 def health_check():
+    """Estado del servicio y la base de datos."""
     from core.db import engine
     from sqlalchemy import text
     try:

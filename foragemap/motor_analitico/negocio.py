@@ -1,12 +1,9 @@
 from sqlalchemy import text
+import math
 import pandas as pd
-
-from repositorios import mapa_color, potreros
-
 
 M2_POR_HA = 10000
 G_POR_KG = 1000
-# densidad en g/m2, area en m2 -> masa en kg
 
 
 def calcular_stock_potrero(engine, potrero_id, usuario_id=None):
@@ -31,7 +28,6 @@ def calcular_stock_potrero(engine, potrero_id, usuario_id=None):
 
         area_bruta_ha = area_bruta_m2 / M2_POR_HA
 
-
         res_ex = conn.execute(
             text("""
                 SELECT COALESCE(
@@ -55,58 +51,48 @@ def calcular_stock_potrero(engine, potrero_id, usuario_id=None):
         area_exclusion_m2 = float(res_ex.area_exclusion_m2) if res_ex and res_ex.area_exclusion_m2 is not None else 0.0
         area_exclusion_ha = area_exclusion_m2 / M2_POR_HA
 
-        # evita area negativa si las exclusiones vienen desalineadas
         area_neta_m2 = max(0.0, area_bruta_m2 - area_exclusion_m2)
         area_neta_ha = max(0.0, area_bruta_ha - area_exclusion_ha)
-
 
         df_puntos = pd.read_sql(
             text("""
                 SELECT fecha, densidad_verde_g_m2, densidad_muerta_g_m2, densidad_total_g_m2
                 FROM mapa_color m
                 WHERE m.potrero_id = :pid AND m.usuario_id = :uid
-                  AND ST_Within(m.geom, (SELECT geom FROM potreros_base WHERE id = :pid AND usuario_id = :uid))
+                  AND ST_Covers((SELECT geom FROM potreros_base WHERE id = :pid AND usuario_id = :uid), m.geom)
                   AND m.fecha = (
                       SELECT MAX(fecha) FROM mapa_color
                       WHERE potrero_id = :pid AND usuario_id = :uid
-                        AND ST_Within(geom, (SELECT geom FROM potreros_base WHERE id = :pid AND usuario_id = :uid))
+                        AND ST_Covers((SELECT geom FROM potreros_base WHERE id = :pid AND usuario_id = :uid), geom)
                   )
             """),
             conn,
             params={"pid": potrero_id, "uid": usuario_id},
         )
 
-
-        # compatibilidad con datos antiguos sin interseccion espacial
         if df_puntos.empty:
-            df_puntos = pd.read_sql(
-                text("""
-                    SELECT fecha, densidad_verde_g_m2, densidad_muerta_g_m2, densidad_total_g_m2
-                    FROM mapa_color
-                    WHERE potrero_id = :pid AND usuario_id = :uid
-                      AND fecha = (SELECT MAX(fecha) FROM mapa_color WHERE potrero_id = :pid AND usuario_id = :uid)
-                """),
-                conn,
-                params={"pid": potrero_id, "uid": usuario_id},
-            )
-            if df_puntos.empty:
-                return None
+            return None
 
-
-    densidad_promedio_verde_g_m2 = float(df_puntos["densidad_verde_g_m2"].mean())
-    densidad_promedio_muerta_g_m2 = float(df_puntos["densidad_muerta_g_m2"].mean())
-    densidad_promedio_total_g_m2 = float(df_puntos["densidad_total_g_m2"].mean())
-
-
-    suma = densidad_promedio_verde_g_m2 + densidad_promedio_muerta_g_m2
-    if densidad_promedio_total_g_m2 and suma:
-        if abs(densidad_promedio_total_g_m2 - suma) / max(suma, 1) > 0.05:
-            pass
-
+    for col in ("densidad_verde_g_m2", "densidad_muerta_g_m2", "densidad_total_g_m2"):
+        serie = df_puntos[col].dropna()
+        if serie.empty:
+            return None
+    verde_mean = float(df_puntos["densidad_verde_g_m2"].dropna().mean())
+    muerta_mean = float(df_puntos["densidad_muerta_g_m2"].dropna().mean())
+    total_mean = float(df_puntos["densidad_total_g_m2"].dropna().mean())
+    if any(math.isnan(v) or math.isinf(v) for v in (verde_mean, muerta_mean, total_mean)):
+        return None
+    densidad_promedio_verde_g_m2 = verde_mean
+    densidad_promedio_muerta_g_m2 = muerta_mean
+    densidad_promedio_total_g_m2 = total_mean
 
     masa_total_potrero_verde_kg = densidad_promedio_verde_g_m2 * area_neta_m2 / G_POR_KG
     masa_total_potrero_muerta_kg = densidad_promedio_muerta_g_m2 * area_neta_m2 / G_POR_KG
     masa_total_potrero_total_kg = densidad_promedio_total_g_m2 * area_neta_m2 / G_POR_KG
+    if any(not math.isfinite(v) for v in (
+        masa_total_potrero_verde_kg, masa_total_potrero_muerta_kg, masa_total_potrero_total_kg,
+    )):
+        return None
 
     return {
         "nombre": nombre,

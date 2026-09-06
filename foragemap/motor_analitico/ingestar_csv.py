@@ -87,18 +87,24 @@ def _validar_titularidad(gdf, tabla):
         with engine.connect() as conn:
             for potrero_id in gdf["potrero_id"].unique():
                 try:
-                    pid_int = int(potrero_id)
-                except:
+                    pid_int = int(str(potrero_id).strip())
+                except (ValueError, TypeError):
                     return f"[X] potrero_id '{potrero_id}' no es numérico. Abortando ingesta; no se insertó nada."
-                res = conn.execute(text("SELECT usuario_id FROM potreros_base WHERE id=:pid"), {"pid": pid_int}).fetchone()
+                res = conn.execute(text("SELECT usuario_id, finca FROM potreros_base WHERE id=:pid"), {"pid": pid_int}).fetchone()
                 if not res:
                     return f"[X] Potrero ID {pid_int} no existe en potreros_base. Abortando ingesta; no se insertó nada.\n    Creá el potrero primero o corregí el potrero_id."
                 owner = int(res.usuario_id)
                 subset = gdf[gdf["potrero_id"] == potrero_id]
+                fincas_csv = {str(v).strip() for v in subset["finca"].unique()}
+                if fincas_csv != {res.finca.strip()}:
+                    return (
+                        f"[X] Finca del CSV {sorted(fincas_csv)} no coincide con la del potrero {pid_int} ('{res.finca}'). "
+                        "Abortando ingesta; no se insertó nada."
+                    )
                 for uid in subset["usuario_id"].unique():
                     try:
-                        uid_int = int(uid)
-                    except:
+                        uid_int = int(str(uid).strip())
+                    except (ValueError, TypeError):
                         return f"[X] usuario_id '{uid}' no es numérico para potrero {pid_int}. Abortando."
                     if uid_int != owner:
                         return (
@@ -111,6 +117,58 @@ def _validar_titularidad(gdf, tabla):
         return None
     except Exception as e:
         return f"[X] Error validando titularidad: {e}. Abortando."
+
+
+COLUMNAS_DENSIDAD = ("densidad_verde_g_m2", "densidad_muerta_g_m2", "densidad_total_g_m2")
+
+
+def _validar_densidades(df):
+    if not any(c in df.columns for c in COLUMNAS_DENSIDAD):
+        return None
+    numericas = {}
+    for col in COLUMNAS_DENSIDAD:
+        vals = pd.to_numeric(df[col], errors="coerce")
+        if vals.isna().any():
+            filas = df[vals.isna()].index.tolist()[:3]
+            return f"[X] Columna '{col}' con valores no numéricos (filas CSV {[i + 2 for i in filas]}). Abortando ingesta; no se insertó nada."
+        if (vals < 0).any():
+            filas = df[vals < 0].index.tolist()[:3]
+            return f"[X] Columna '{col}' con densidades negativas (filas CSV {[i + 2 for i in filas]}). Abortando ingesta; no se insertó nada."
+        numericas[col] = vals
+    suma = numericas["densidad_verde_g_m2"] + numericas["densidad_muerta_g_m2"]
+    dif = (numericas["densidad_total_g_m2"] - suma).abs() / suma.where(suma != 0, 1).abs()
+    if (dif > 0.05).any():
+        filas = df[dif > 0.05].index.tolist()[:3]
+        return f"[X] densidad_total incoherente con verde+muerta (>5%, filas CSV {[i + 2 for i in filas]}). Abortando ingesta; no se insertó nada."
+    return None
+
+
+def _validar_potreros_unicos(gdf):
+    clave = ["usuario_id", "finca", "nombre"]
+    norm = gdf[clave].astype(str).apply(lambda s: s.str.strip())
+    dup = norm[norm.duplicated(keep=False)]
+    if not dup.empty:
+        ejemplos = dup.drop_duplicates().head(3).to_dict("records")
+        return f"[X] Potreros duplicados en el CSV (usuario_id, finca, nombre): {ejemplos}. Abortando ingesta; no se insertó nada."
+    try:
+        with engine.connect() as conn:
+            for _, r in norm.drop_duplicates().iterrows():
+                try:
+                    uid_int = int(r["usuario_id"])
+                except (ValueError, TypeError):
+                    return f"[X] usuario_id '{r['usuario_id']}' no es numérico. Abortando ingesta; no se insertó nada."
+                existe = conn.execute(
+                    text("SELECT 1 FROM potreros_base WHERE usuario_id = :uid AND finca = :finca AND nombre = :nombre"),
+                    {"uid": uid_int, "finca": r["finca"], "nombre": r["nombre"]},
+                ).fetchone()
+                if existe:
+                    return (
+                        f"[X] Potrero ya existe (usuario_id={uid_int}, finca='{r['finca']}', nombre='{r['nombre']}'). "
+                        "Abortando ingesta; no se insertó nada."
+                    )
+    except Exception as e:
+        return f"[X] Error validando potreros existentes: {e}. Abortando."
+    return None
 
 
 def _leer_csv(ruta, encoding):
@@ -164,10 +222,20 @@ def principal():
         print(error_esquema)
         return
 
+    for col in ("finca", "nombre", "tipo", "origen"):
+        if col in df.columns and df[col].dtype == object:
+            df[col] = df[col].astype(str).str.strip()
+
     error_completitud = _validar_completitud(df)
     if error_completitud:
         print(error_completitud)
         return
+
+    if args.tabla == "mapa_color":
+        error_densidades = _validar_densidades(df)
+        if error_densidades:
+            print(error_densidades)
+            return
 
     if "latitud" in df.columns and "longitud" in df.columns:
         lat = pd.to_numeric(df["latitud"], errors="coerce")
@@ -208,6 +276,12 @@ def principal():
         error_titularidad = _validar_titularidad(gdf, args.tabla)
         if error_titularidad:
             print(error_titularidad)
+            return
+
+    if args.tabla == "potreros_base":
+        error_unicos = _validar_potreros_unicos(gdf)
+        if error_unicos:
+            print(error_unicos)
             return
 
     print(f"[*] Intentando inyectar {len(gdf)} filas a la tabla '{args.tabla}'...")

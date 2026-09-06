@@ -2,7 +2,6 @@ from sqlalchemy import text
 
 
 def obtener_totales_dashboard(conn, usuario_id: int, finca: str, fecha) -> dict:
-    # agregacion simple por finca y fecha, usa indice compuesto
     sql = text("""
         SELECT
             COALESCE(SUM(area_neta_ha), 0)      AS area_total_ha,

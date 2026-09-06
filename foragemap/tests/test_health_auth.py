@@ -20,7 +20,24 @@ def test_health_db_up():
     with patch("core.db.engine", mock_engine):
         resp = client.get("/health")
     assert resp.status_code == 200
-    assert resp.json()["status"] == "ok"
+    assert resp.json() == {"status": "ok", "db": "up"}
+    mock_conn.execute.assert_called_once()
+
+
+def test_auth_usuario_eliminado_401():
+    from tests.conftest import auth_headers
+    mock_conn = MagicMock()
+    mock_engine = MagicMock()
+    mock_engine.connect.return_value.__enter__.return_value = mock_conn
+    mock_conn.execute.return_value.fetchone.return_value = None
+    with patch("core.seguridad.engine", mock_engine):
+        resp = client.get("/api/mapa/filtros", headers=auth_headers(1))
+    assert resp.status_code == 401
+
+
+def test_registro_email_largo_400():
+    resp = client.post("/api/auth/registro", json={"email": "a" * 140 + "@x.com", "password": "123456"})
+    assert resp.status_code == 400
 
 
 def test_openapi_expone_endpoints():

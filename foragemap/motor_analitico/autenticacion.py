@@ -1,15 +1,29 @@
 import argparse
-import bcrypt
 
 from core.db import engine
+from core.seguridad import (
+    email_valido,
+    hash_password,
+    verificar_password,
+    derivar_nombre,
+)
 from repositorios import usuarios
 
 
 def registrar_usuario(email, password):
-    nombre_extraido = email.split('@')[0].replace('.', ' ').title()
+    email = email.strip().lower()
+    if not email_valido(email):
+        print("[X] Email inválido.")
+        return
+    if len(email) > 100:
+        print("[X] Email demasiado largo (máx. 100).")
+        return
+    if len(password) < 6:
+        print("[X] Contraseña debe tener al menos 6 caracteres.")
+        return
 
-    salt = bcrypt.gensalt()
-    hash_seguro = bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+    nombre_extraido = derivar_nombre(email)
+    hash_seguro = hash_password(password)
 
     try:
         with engine.begin() as conn:
@@ -20,6 +34,7 @@ def registrar_usuario(email, password):
 
 
 def login_usuario(email, password):
+    email = email.strip().lower()
     with engine.connect() as conn:
         resultado = usuarios.obtener_por_email(conn, email)
 
@@ -29,7 +44,7 @@ def login_usuario(email, password):
 
     usuario_id, nombre, hash_guardado = resultado
 
-    if bcrypt.checkpw(password.encode('utf-8'), hash_guardado.encode('utf-8')):
+    if verificar_password(password, hash_guardado):
         print(f"[+] ¡Login exitoso! Bienvenido {nombre} (ID: {usuario_id})")
     else:
         print("[X] Acceso denegado: Contraseña incorrecta.")

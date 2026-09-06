@@ -3,7 +3,7 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE TABLE usuarios (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
-    email VARCHAR(100) UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL
 );
 
@@ -12,43 +12,47 @@ CREATE TABLE potreros_base (
     usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     nombre VARCHAR(50) NOT NULL,
     finca VARCHAR(100) NOT NULL,
-    geom geometry(Polygon, 4326) NOT NULL
+    geom geometry(Polygon, 4326) NOT NULL,
+    UNIQUE (usuario_id, id)
 );
 
 CREATE TABLE mapa_color (
     id SERIAL PRIMARY KEY,
     usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    potrero_id INTEGER NOT NULL REFERENCES potreros_base(id) ON DELETE CASCADE,
+    potrero_id INTEGER NOT NULL,
     finca VARCHAR(100) NOT NULL,
     fecha DATE NOT NULL DEFAULT CURRENT_DATE,
     densidad_verde_g_m2 NUMERIC,
     densidad_muerta_g_m2 NUMERIC,
     densidad_total_g_m2 NUMERIC,
     origen VARCHAR(50) NOT NULL DEFAULT 'interpolacion',
-    geom geometry(Point, 4326) NOT NULL
+    geom geometry(Point, 4326) NOT NULL,
+    FOREIGN KEY (usuario_id, potrero_id) REFERENCES potreros_base(usuario_id, id) ON DELETE CASCADE
 );
 
 CREATE TABLE zonas_exclusion (
     id SERIAL PRIMARY KEY,
     usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    potrero_id INTEGER NOT NULL REFERENCES potreros_base(id) ON DELETE CASCADE,
+    potrero_id INTEGER NOT NULL,
     finca VARCHAR(100) NOT NULL,
     nombre VARCHAR(50) NOT NULL,
     tipo VARCHAR(50) NOT NULL,
-    geom geometry(Polygon, 4326) NOT NULL
+    geom geometry(Polygon, 4326) NOT NULL,
+    FOREIGN KEY (usuario_id, potrero_id) REFERENCES potreros_base(usuario_id, id) ON DELETE CASCADE
 );
 
 CREATE TABLE calculos_stock (
     id SERIAL PRIMARY KEY,
     usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    potrero_id INTEGER NOT NULL REFERENCES potreros_base(id) ON DELETE CASCADE,
+    potrero_id INTEGER NOT NULL,
     finca VARCHAR(100) NOT NULL,
     fecha DATE NOT NULL DEFAULT CURRENT_DATE,
     area_neta_ha NUMERIC,
     masa_seca_verde NUMERIC,
     masa_seca_muerta NUMERIC,
     masa_seca_total NUMERIC NOT NULL,
-    UNIQUE (usuario_id, potrero_id, fecha)
+    UNIQUE (usuario_id, potrero_id, fecha),
+    FOREIGN KEY (usuario_id, potrero_id) REFERENCES potreros_base(usuario_id, id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_color_geom ON mapa_color USING GIST (geom);

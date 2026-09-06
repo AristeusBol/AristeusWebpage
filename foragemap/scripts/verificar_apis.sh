@@ -29,19 +29,19 @@ extract_token() {
 info "BASE_URL=$BASE_URL EMAIL=$EMAIL FINCA=$FINCA FECHA=$FECHA TIPO=$TIPO"
 echo "------------------------------------------------------------"
 
-info "1/7 GET /"
+info "1/9 GET /"
 code=$(curl_status "$BASE_URL/")
 if [[ "$code" == "200" ]] && grep -q '"status":"ok"' /tmp/_body; then ok "GET / 200"; else fail_ "GET / $code $(cat /tmp/_body | head -c 200)"; fi
 
-info "2/7 GET /health (DB up?)"
+info "2/9 GET /health (DB up?)"
 code=$(curl_status "$BASE_URL/health")
 if [[ "$code" == "200" ]] && grep -q '"db":"up"' /tmp/_body; then ok "GET /health db:up"; else fail_ "GET /health $code $(cat /tmp/_body | head -c 300)"; cat /tmp/_body; fi
 
-info "3/7 GET /openapi.json"
+info "3/9 GET /openapi.json"
 code=$(curl_status "$BASE_URL/openapi.json")
 if [[ "$code" == "200" ]] && grep -q '"openapi"' /tmp/_body; then ok "GET /openapi.json 200"; else fail_ "GET /openapi.json $code"; fi
 
-info "4/7 POST /api/auth/login"
+info "4/9 POST /api/auth/login"
 code=$(curl -s -o /tmp/_body -w "%{http_code}" -X POST "$BASE_URL/api/auth/login" \
   -H "Content-Type: application/json" \
   -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")
@@ -55,18 +55,19 @@ else
   TOKEN=""
 fi
 
-AUTH_HEADER=()
-if [[ -n "${TOKEN:-}" ]]; then
-  AUTH_HEADER=(-H "Authorization: Bearer $TOKEN")
-  UID_PARAM=""
-else
-  info "Sin token, usando fallback ?usuario_id=1 (solo dev)"
-  UID_PARAM="&usuario_id=1"
+if [[ -z "${TOKEN:-}" ]]; then
+  fail_ "Sin token: login falló, no se pueden probar rutas protegidas (la API ya no acepta ?usuario_id=)."
+  echo "Diagnóstico rápido:"
+  echo "  curl $BASE_URL/health"
+  echo "  docker compose -f infraestructura/docker-compose.yml logs --tail 50"
+  echo "------------------------------------------------------------"
+  echo -e "Resumen: ${GREEN}$pass OK${NC} / ${RED}$fail FAIL${NC}"
+  exit 1
 fi
+AUTH_HEADER=(-H "Authorization: Bearer $TOKEN")
 
-info "5/7 GET /api/mapa/filtros"
-url="$BASE_URL/api/mapa/filtros?usuario_id=1"
-if [[ -n "${TOKEN:-}" ]]; then url="$BASE_URL/api/mapa/filtros"; fi
+info "5/9 GET /api/mapa/filtros"
+url="$BASE_URL/api/mapa/filtros"
 code=$(curl_status "$url" "${AUTH_HEADER[@]}")
 if [[ "$code" == "200" ]] && grep -q '"fincas"' /tmp/_body; then
   ok "GET /api/mapa/filtros 200"
@@ -75,10 +76,9 @@ else
   fail_ "GET /api/mapa/filtros $code $(cat /tmp/_body | head -c 500)"
 fi
 
-info "6/7 GET /api/dashboard/resumen"
+info "6/9 GET /api/dashboard/resumen"
 enc_finca=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$FINCA'))")
-url="$BASE_URL/api/dashboard/resumen?finca=$enc_finca&fecha=$FECHA$UID_PARAM"
-if [[ -n "${TOKEN:-}" ]]; then url="$BASE_URL/api/dashboard/resumen?finca=$enc_finca&fecha=$FECHA"; fi
+url="$BASE_URL/api/dashboard/resumen?finca=$enc_finca&fecha=$FECHA"
 code=$(curl_status "$url" "${AUTH_HEADER[@]}")
 if [[ "$code" == "200" ]] && grep -q '"metricas"' /tmp/_body; then
   ok "GET /api/dashboard/resumen 200"
@@ -95,9 +95,8 @@ else
   fail_ "GET /api/dashboard/resumen $code $(cat /tmp/_body | head -c 700)"
 fi
 
-info "7/7 GET /api/mapa/geojson"
-url="$BASE_URL/api/mapa/geojson?finca=$enc_finca&fecha=$FECHA&tipo_densidad=$TIPO$UID_PARAM"
-if [[ -n "${TOKEN:-}" ]]; then url="$BASE_URL/api/mapa/geojson?finca=$enc_finca&fecha=$FECHA&tipo_densidad=$TIPO"; fi
+info "7/9 GET /api/mapa/geojson"
+url="$BASE_URL/api/mapa/geojson?finca=$enc_finca&fecha=$FECHA&tipo_densidad=$TIPO"
 code=$(curl_status "$url" "${AUTH_HEADER[@]}")
 if [[ "$code" == "200" ]] && grep -q '"FeatureCollection"' /tmp/_body; then
   ok "GET /api/mapa/geojson 200"
@@ -112,9 +111,8 @@ else
   fail_ "GET /api/mapa/geojson $code $(cat /tmp/_body | head -c 700)"
 fi
 
-info "8/7 GET /api/mapa/tiles/{z}/{x}/{y}.pbf (MVT)"
-url="$BASE_URL/api/mapa/tiles/10/500/500.pbf?finca=$enc_finca&fecha=$FECHA&tipo_densidad=$TIPO$UID_PARAM"
-if [[ -n "${TOKEN:-}" ]]; then url="$BASE_URL/api/mapa/tiles/10/500/500.pbf?finca=$enc_finca&fecha=$FECHA&tipo_densidad=$TIPO"; fi
+info "8/9 GET /api/mapa/tiles/{z}/{x}/{y}.pbf (MVT)"
+url="$BASE_URL/api/mapa/tiles/10/500/500.pbf?finca=$enc_finca&fecha=$FECHA&tipo_densidad=$TIPO"
 code=$(curl -s -o /tmp/_tile.pbf -w "%{http_code}" "$url" "${AUTH_HEADER[@]}" -H "Accept: application/x-protobuf")
 ct=$(curl -s -D - -o /dev/null "$url" "${AUTH_HEADER[@]}" | grep -i "^content-type" || true)
 size=$(wc -c < /tmp/_tile.pbf 2>/dev/null || echo 0)

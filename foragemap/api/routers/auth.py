@@ -1,11 +1,17 @@
 from datetime import datetime, timedelta, timezone
 
-import bcrypt
 from fastapi import APIRouter, HTTPException
 from jose import jwt
+from sqlalchemy.exc import IntegrityError
 
 from core.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 from core.db import engine
+from core.seguridad import (
+    email_valido,
+    hash_password,
+    verificar_password,
+    derivar_nombre,
+)
 from repositorios import usuarios
 from api.schemas import UsuarioRegistro, UsuarioRespuesta, LoginRequest, LoginRespuesta
 
@@ -21,32 +27,35 @@ def crear_access_token(data: dict, expires_delta: timedelta | None = None):
 
 @router.post("/registro", response_model=UsuarioRespuesta, status_code=201)
 def registro(payload: UsuarioRegistro):
+    """Registra un usuario. Devuelve {id, nombre, email}."""
     email = payload.email.strip().lower()
-    if "@" not in email or "." not in email:
+    if not email_valido(email):
         raise HTTPException(status_code=400, detail="Email inválido")
+    if len(email) > 100:
+        raise HTTPException(status_code=400, detail="Email demasiado largo (máx. 100)")
     if len(payload.password) < 6:
         raise HTTPException(status_code=400, detail="Contraseña debe tener al menos 6 caracteres")
 
-    nombre_extraido = email.split("@")[0].replace(".", " ").title()
-    salt = bcrypt.gensalt()
-    hash_seguro = bcrypt.hashpw(payload.password.encode("utf-8"), salt).decode("utf-8")
+    nombre_extraido = derivar_nombre(email)
+    hash_seguro = hash_password(payload.password)
     try:
         with engine.begin() as conn:
             nuevo_id = usuarios.insertar_usuario(conn, nombre_extraido, email, hash_seguro)
-    except Exception as e:
+    except IntegrityError:
         raise HTTPException(status_code=400, detail=f"Email ya registrado: {email}")
     return UsuarioRespuesta(id=nuevo_id, nombre=nombre_extraido, email=email)
 
 
 @router.post("/login", response_model=LoginRespuesta)
 def login(payload: LoginRequest):
+    """Inicia sesión. Devuelve {access_token, id, nombre, email}."""
     email = payload.email.strip().lower()
     with engine.connect() as conn:
         resultado = usuarios.obtener_por_email(conn, email)
     if not resultado:
         raise HTTPException(status_code=401, detail="Email no existe")
     usuario_id, nombre, hash_guardado = resultado
-    if not bcrypt.checkpw(payload.password.encode("utf-8"), hash_guardado.encode("utf-8")):
+    if not verificar_password(payload.password, hash_guardado):
         raise HTTPException(status_code=401, detail="Contraseña incorrecta")
 
     access_token = crear_access_token(data={"sub": str(usuario_id)})

@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from jose import jwt
 
 from api.main import app
+from tests.conftest import auth_headers
 from core.config import ALGORITHM, SECRET_KEY
 
 client = TestClient(app)
@@ -28,7 +29,7 @@ def test_filtros_sin_finca_dev_usuario_id():
         [(datetime.date(2024, 4, 1),), (datetime.date(2024, 3, 15),)],
     )
     with patch("api.routers.filtros.engine", eng):
-        resp = client.get("/api/mapa/filtros?usuario_id=1")
+        resp = client.get("/api/mapa/filtros", headers=auth_headers(1))
     assert resp.status_code == 200
     data = resp.json()
     assert data["fincas"] == ["El Puesto", "La Esperanza"]
@@ -46,7 +47,7 @@ def test_filtros_con_finca_cascada():
         [(datetime.date(2024, 4, 1),)],
     )
     with patch("api.routers.filtros.engine", eng):
-        resp = client.get("/api/mapa/filtros?usuario_id=1&finca=El%20Puesto")
+        resp = client.get("/api/mapa/filtros?finca=El%20Puesto", headers=auth_headers(1))
     assert resp.status_code == 200
     assert resp.json()["fechas"] == ["2024-04-01"]
     assert resp.json()["filtros_aplicados"]["finca"] == "El Puesto"
@@ -58,9 +59,10 @@ def test_filtros_con_finca_cascada():
 
 
 def test_filtros_solo_calculos_stock_no_geometrias():
+    """Garantiza que no se toca mapa_color/potreros_base para fechas"""
     eng, conn = _mock_engine([], [])
     with patch("api.routers.filtros.engine", eng):
-        client.get("/api/mapa/filtros?usuario_id=99")
+        client.get("/api/mapa/filtros", headers=auth_headers(99))
     for call in conn.execute.call_args_list:
         sql = str(call[0][0]).lower()
         assert "mapa_color" not in sql
@@ -93,12 +95,12 @@ def test_filtros_jwt_expirado_401():
 def test_filtros_tipos_densidad_estatico():
     eng, _ = _mock_engine([], [])
     with patch("api.routers.filtros.engine", eng):
-        resp = client.get("/api/mapa/filtros?usuario_id=1")
+        resp = client.get("/api/mapa/filtros", headers=auth_headers(1))
     assert set(resp.json()["tipos_densidad"]) == {"verde", "muerta", "total"}
 
 
 def test_filtros_trim_finca():
     eng, _ = _mock_engine([], [])
     with patch("api.routers.filtros.engine", eng):
-        resp = client.get("/api/mapa/filtros?usuario_id=1&finca=%20%20")
+        resp = client.get("/api/mapa/filtros?finca=%20%20", headers=auth_headers(1))
     assert resp.json()["filtros_aplicados"]["finca"] is None

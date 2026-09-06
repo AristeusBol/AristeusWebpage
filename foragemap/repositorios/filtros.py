@@ -5,7 +5,6 @@ TIPOS_DENSIDAD = ["verde", "muerta", "total"]
 
 
 def listar_fincas_disponibles(conn, usuario_id: int) -> list[str]:
-    # calculos_stock es liviana, no trae geometrias
     sql = text("""
         SELECT DISTINCT finca
         FROM calculos_stock

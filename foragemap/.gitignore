@@ -105,3 +105,6 @@ temp/
 # volumen nombrado (no archivo), no hace falta ignorar
 # postgis_data/
 .docker/
+
+# ── Uploads calibración (fotos locales, no versionar) ──
+uploads/

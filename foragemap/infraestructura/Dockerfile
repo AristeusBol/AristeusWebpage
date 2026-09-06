@@ -11,6 +11,9 @@ COPY core ./core
 COPY repositorios ./repositorios
 COPY motor_analitico ./motor_analitico
 COPY api ./api
+# El CLI usa DATOS_DIR (core/config.py) con default datos/mapa_color.csv;
+# sin esto la ingesta dentro del contenedor falla con FileNotFoundError.
+COPY datos ./datos
 
 RUN pip install --no-cache-dir -e .
 

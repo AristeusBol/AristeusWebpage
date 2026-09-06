@@ -1,4 +1,3 @@
-from typing import Optional
 from pydantic import BaseModel
 
 
@@ -24,7 +23,3 @@ class LoginRespuesta(BaseModel):
     id: int
     nombre: str
     email: str
-
-
-class TokenData(BaseModel):
-    sub: Optional[str] = None
