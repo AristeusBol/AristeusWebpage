@@ -28,14 +28,40 @@ import Icon from '../../components/icons/Icon';
                 </div>
               </div>
               
-              <div class="grid md:grid-cols-2 gap-4 mb-8">
-                <a href="/#demo-mapa" class="glass rounded-xl p-6 hover:shadow-lg transition-smooth text-left">
-                  <h3 class="font-heading font-semibold text-text-primary mb-2">🗺️ Visualiza tu campo</h3>
-                  <p class="text-text-secondary text-sm">Explora el mapa interactivo con datos aereos</p>
+              <div class="grid md:grid-cols-3 gap-4 mb-8">
+                <a href="/mi-finca" class="glass rounded-xl p-6 hover:shadow-lg transition-smooth text-left border-2 border-aristeus-green/40 bg-aristeus-green/5 group hover:border-aristeus-green relative overflow-hidden">
+                  <div class="absolute top-2 right-2">
+                    <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-aristeus-green text-text-inverse font-data font-bold">GrassGauge</span>
+                  </div>
+                  <h3 class="font-heading font-bold text-text-primary group-hover:text-aristeus-green transition-smooth mb-2 flex items-center gap-2 text-lg">
+                    🌾 Mi Finca
+                  </h3>
+                  <p class="text-text-secondary text-xs mb-4">
+                    Mapa de calor satelital, potreros, parcelas y estimación de materia seca (kg MS/ha).
+                  </p>
+                  <span class="text-xs font-semibold text-aristeus-green flex items-center gap-1 group-hover:translate-x-1 transition-smooth">
+                    Gestionar campo →
+                  </span>
                 </a>
-                <a href="/productos" class="glass rounded-xl p-6 hover:shadow-lg transition-smooth text-left">
-                  <h3 class="font-heading font-semibold text-text-primary mb-2">🌿 Productos</h3>
-                  <p class="text-text-secondary text-sm">Conocé GrassGauge y Cattle Vision</p>
+
+                <a href="/#demo-mapa" class="glass rounded-xl p-6 hover:shadow-lg transition-smooth text-left group">
+                  <h3 class="font-heading font-semibold text-text-primary group-hover:text-aristeus-green transition-smooth mb-2 flex items-center gap-2">
+                    🗺️ Visualiza tu campo
+                  </h3>
+                  <p class="text-text-secondary text-xs mb-4">Explora el mapa interactivo demostrativo con datos aéreos y capas NDVI.</p>
+                  <span class="text-xs font-semibold text-aristeus-navy flex items-center gap-1 group-hover:translate-x-1 transition-smooth">
+                    Ver demo aérea →
+                  </span>
+                </a>
+
+                <a href="/productos" class="glass rounded-xl p-6 hover:shadow-lg transition-smooth text-left group">
+                  <h3 class="font-heading font-semibold text-text-primary group-hover:text-aristeus-green transition-smooth mb-2 flex items-center gap-2">
+                    🌿 Productos
+                  </h3>
+                  <p class="text-text-secondary text-xs mb-4">Conoce las soluciones completas GrassGauge y Cattle Vision.</p>
+                  <span class="text-xs font-semibold text-aristeus-navy flex items-center gap-1 group-hover:translate-x-1 transition-smooth">
+                    Ver catálogo →
+                  </span>
                 </a>
               </div>
 
@@ -284,24 +310,24 @@ import Icon from '../../components/icons/Icon';
       </header>
 
       <nav class="tabs-nav">
-        <button class="tab-item">MI TERRENO</button>
-        <button class="tab-item tab-active">MI PLANIFICACIÓN</button>
-        <button class="tab-item">MIS DATOS</button>
+        <a href="/mi-finca" class="tab-item hover:text-aristeus-green transition-smooth flex items-center justify-center">MI FINCA / TERRENO</a>
+        <a href="/dashboard" class="tab-item tab-active flex items-center justify-center">MI PLANIFICACIÓN</a>
+        <a href="/mi-finca" class="tab-item hover:text-aristeus-green transition-smooth flex items-center justify-center">MAPA DE CALOR</a>
       </nav>
 
       <div class="date-sub">
-        POTRERO #01 // AGOSTO 2026
+        ESTANCIA SUJALITO // POTRERO NORTE // AGOSTO 2026
       </div>
 
       <main class="main-content">
-        <div class="map-box">
-          <img src="/assets/MapaLotes.png" alt="Mapa" class="map-img" />
+        <a href="/mi-finca" class="map-box block group cursor-pointer" title="Haga clic para abrir el Gestor Geoespacial Mi Finca">
+          <img src="/assets/MapaLotes.png" alt="Mapa" class="map-img group-hover:scale-105 transition-all duration-300" />
           <div class="camera-guide"></div>
           <div class="map-buttons">
-            <button class="map-btn">Lotes</button>
-            <button class="map-btn">🧭</button>
+            <span class="map-btn bg-aristeus-green text-white">Abrir Mi Finca ↗</span>
+            <span class="map-btn">🧭</span>
           </div>
-        </div>
+        </a>
 
         <div class="cards-section">
           <div class="cards-grid">

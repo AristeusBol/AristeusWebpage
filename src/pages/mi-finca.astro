@@ -1,0 +1,23 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import FarmManager from '../components/farm/FarmManager.tsx';
+---
+
+<BaseLayout 
+  title="Mi Finca - Gestión Geoespacial y Biomasa" 
+  description="Definición de perímetros, gestión de potreros, parcelación y mapa de calor de materia seca con inteligencia satelital y visión computacional."
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    <!-- Breadcrumb / Status bar -->
+    <div class="flex items-center gap-2 text-xs text-text-secondary mb-6 font-data">
+      <a href="/" class="hover:text-aristeus-green transition-smooth">Inicio</a>
+      <span>/</span>
+      <a href="/dashboard" class="hover:text-aristeus-green transition-smooth">Mi panel</a>
+      <span>/</span>
+      <span class="text-text-primary font-semibold">Mi Finca (GrassGauge Manager)</span>
+    </div>
+
+    <!-- Componente React Island FarmManager -->
+    <FarmManager client:only="react" />
+  </div>
+</BaseLayout>

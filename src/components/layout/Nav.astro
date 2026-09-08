@@ -59,7 +59,10 @@ const navLinks = [
           <a href="/dashboard" class="text-text-secondary hover:text-text-primary font-medium transition-smooth text-sm">
             Mi panel
           </a>
-          <button id="nav-logout-desktop" class="px-4 py-2 rounded-lg border border-border-subtle text-text-primary text-sm font-medium hover:bg-bg-secondary transition-smooth">
+          <a href="/mi-finca" class="px-3 py-1.5 rounded-lg bg-aristeus-green/15 text-aristeus-secondary hover:bg-aristeus-green hover:text-text-inverse border border-aristeus-green/30 font-medium transition-smooth text-sm flex items-center gap-1.5">
+            <span>🌾</span> Mi Finca
+          </a>
+          <button id="nav-logout-desktop" class="px-3 py-1.5 rounded-lg border border-border-subtle text-text-primary text-sm font-medium hover:bg-bg-secondary transition-smooth">
             Cerrar sesión
           </button>
         </div>
@@ -102,11 +105,14 @@ const navLinks = [
         </div>
         
         <div id="nav-user-mobile" class="hidden items-center gap-2">
-          <a href="/?dashboard=1" class="text-text-secondary hover:text-text-primary font-medium text-sm">
+          <a href="/dashboard" class="text-text-secondary hover:text-text-primary font-medium text-xs">
             Mi panel
           </a>
-          <button id="nav-logout-mobile" class="px-3 py-1.5 rounded-lg border border-border-subtle text-text-primary text-sm font-medium hover:bg-bg-secondary transition-smooth">
-            Cerrar sesión
+          <a href="/mi-finca" class="px-2.5 py-1 rounded-lg bg-aristeus-green text-text-inverse text-xs font-medium hover:bg-aristeus-secondary transition-smooth">
+            Mi Finca
+          </a>
+          <button id="nav-logout-mobile" class="px-2.5 py-1 rounded-lg border border-border-subtle text-text-primary text-xs font-medium hover:bg-bg-secondary transition-smooth">
+            Salir
           </button>
         </div>
       </div>
