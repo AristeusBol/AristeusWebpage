@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 
 from core.db import engine
 from core.seguridad import get_current_user_id
+from repositorios import potreros as repo_potreros
 
 router = APIRouter(tags=["calibracion"])
 
@@ -44,6 +45,31 @@ def _detectar_mime(contenido: bytes) -> Optional[str]:
     if len(contenido) >= 12 and contenido[4:8] == b"ftyp" and contenido[8:12] in MARCAS_HEIC:
         return "image/heic"
     return None
+
+
+@router.get("/api/potreros")
+def listar_mis_potreros(
+    uid: int = Depends(get_current_user_id),
+):
+    """Lista liviana de potreros del usuario para el selector de calibración."""
+    with engine.connect() as conn:
+        rows = repo_potreros.listar_potreros(conn, uid)
+    return {
+        "potreros": [{"id": r.id, "nombre": r.nombre, "finca": r.finca} for r in rows],
+    }
+
+
+@router.get("/api/potreros/{potrero_id}")
+def detalle_potrero(
+    potrero_id: int,
+    uid: int = Depends(get_current_user_id),
+):
+    """Potrero + exclusiones como GeoJSON para el mapa de marcado de punto."""
+    with engine.connect() as conn:
+        fc = repo_potreros.potrero_y_exclusiones_geojson(conn, potrero_id, uid)
+    if fc is None:
+        raise HTTPException(status_code=404, detail=f"Potrero {potrero_id} no existe o no es tuyo")
+    return fc
 
 
 @router.post("/api/calibracion/fotos", status_code=201)

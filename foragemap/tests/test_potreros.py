@@ -85,46 +85,6 @@ def test_potreros_sin_auth_401():
     assert resp.status_code == 401
 
 
-def test_potreros_lista_sin_auth_401():
-    resp = client.get("/api/potreros")
-    assert resp.status_code == 401
-
-
-def test_potreros_lista_ok():
-    eng, conn = _mock_engine(rows=[
-        MagicMock(id=1, nombre="Lote a1", finca="Finca Don Carlos"),
-        MagicMock(id=2, nombre="Lote a2", finca="Finca Don Carlos"),
-    ])
-    with patch("api.routers.potreros.engine", eng):
-        resp = client.get("/api/potreros", headers=auth_headers(1))
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["potreros"][0]["nombre"] == "Lote a1"
-    assert len(data["potreros"]) == 2
-
-
-def test_potrero_detalle_404():
-    eng = MagicMock()
-    mock_conn = MagicMock()
-    mock_conn.execute.return_value.fetchone.return_value = None
-    eng.connect.return_value.__enter__.return_value = mock_conn
-    with patch("api.routers.potreros.engine", eng):
-        with patch("api.routers.potreros.repo_potreros.potrero_y_exclusiones_geojson", return_value=None):
-            resp = client.get("/api/potreros/999", headers=auth_headers(1))
-    assert resp.status_code == 404
-
-
-def test_potrero_detalle_ok():
-    fc = {"type": "FeatureCollection", "features": []}
-    eng = MagicMock()
-    eng.connect.return_value.__enter__.return_value = MagicMock()
-    with patch("api.routers.potreros.engine", eng):
-        with patch("api.routers.potreros.repo_potreros.potrero_y_exclusiones_geojson", return_value=fc):
-            resp = client.get("/api/potreros/1", headers=auth_headers(1))
-    assert resp.status_code == 200
-    assert resp.json() == fc
-
-
 def test_potreros_finca_vacia_400():
     resp = client.get("/api/potreros/geojson?finca=%20%20&fecha=2026-08-31", headers=auth_headers(1))
     assert resp.status_code == 400

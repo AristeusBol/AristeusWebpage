@@ -122,6 +122,52 @@ def _validar_titularidad(gdf, tabla):
 COLUMNAS_DENSIDAD = ("densidad_verde_g_m2", "densidad_muerta_g_m2", "densidad_total_g_m2")
 
 
+def _validar_exclusiones_mapa(gdf):
+    """Rechaza puntos de mapa_color caídos dentro de una zona de exclusión existente.
+
+    Regla ST_Covers (borde = dentro). All-or-nothing como el resto de validaciones.
+    """
+    try:
+        with engine.connect() as conn:
+            for (uid, pid), sub in gdf.groupby(["usuario_id", "potrero_id"]):
+                try:
+                    uid_int, pid_int = int(str(uid).strip()), int(str(pid).strip())
+                except (ValueError, TypeError):
+                    continue
+                res = conn.execute(
+                    text("""
+                        SELECT COUNT(*) AS n FROM zonas_exclusion
+                        WHERE usuario_id = :uid AND potrero_id = :pid
+                    """),
+                    {"uid": uid_int, "pid": pid_int},
+                ).fetchone()
+                if not res or not res.n:
+                    continue
+                geoms = sub.geometry.tolist()
+                wkt_list = [g.wkt for g in geoms]
+                dentro = conn.execute(
+                    text("""
+                        SELECT COUNT(*) AS n FROM (
+                          SELECT ST_GeomFromText(g, 4326) AS geom
+                          FROM unnest(CAST(:wkts AS text[])) AS g
+                        ) p
+                        JOIN zonas_exclusion z ON z.usuario_id = :uid AND z.potrero_id = :pid
+                        WHERE ST_Covers(z.geom, p.geom)
+                    """),
+                    {"wkts": wkt_list, "uid": uid_int, "pid": pid_int},
+                ).fetchone()
+                n = int(dentro.n or 0)
+                if n > 0:
+                    return (
+                        f"[X] {n} punto(s) de mapa_color caen dentro de una zona de exclusión "
+                        f"(usuario_id={uid_int}, potrero_id={pid_int}). Abortando ingesta; no se insertó nada."
+                        "\n    Eliminá esas filas del CSV o ajustá la exclusión."
+                    )
+        return None
+    except Exception as e:
+        return f"[X] Error validando exclusiones: {e}. Abortando."
+
+
 def _validar_densidades(df):
     if not any(c in df.columns for c in COLUMNAS_DENSIDAD):
         return None
@@ -277,6 +323,35 @@ def principal():
         if error_titularidad:
             print(error_titularidad)
             return
+
+    if args.tabla == "mapa_color":
+        error_exclusiones = _validar_exclusiones_mapa(gdf)
+        if error_exclusiones:
+            print(error_exclusiones)
+            return
+
+    if args.tabla == "zonas_exclusion":
+        try:
+            with engine.connect() as conn:
+                for _, r in gdf.iterrows():
+                    try:
+                        uid_int, pid_int = int(str(r["usuario_id"]).strip()), int(str(r["potrero_id"]).strip())
+                    except (ValueError, TypeError):
+                        continue
+                    n = conn.execute(
+                        text("""
+                            SELECT COUNT(*) AS n FROM mapa_color m
+                            WHERE m.usuario_id = :uid AND m.potrero_id = :pid
+                              AND ST_Covers(ST_GeomFromText(:wkt, 4326), m.geom)
+                        """),
+                        {"uid": uid_int, "pid": pid_int, "wkt": r.geometry.wkt},
+                    ).fetchone()
+                    if n and n.n:
+                        print(f"[!] Aviso: la exclusión '{r.get('nombre', '?')}' (potrero {pid_int}) "
+                              f"cubre {int(n.n)} punto(s) existentes de mapa_color. "
+                              f"Esos puntos ya no se usan en tiles/cálculos/histograma.")
+        except Exception as e:
+            print(f"[!] No se pudo verificar solape con mapa_color: {e}")
 
     if args.tabla == "potreros_base":
         error_unicos = _validar_potreros_unicos(gdf)

@@ -60,6 +60,8 @@ def calcular_stock_potrero(engine, potrero_id, usuario_id=None):
                 FROM mapa_color m
                 WHERE m.potrero_id = :pid AND m.usuario_id = :uid
                   AND ST_Covers((SELECT geom FROM potreros_base WHERE id = :pid AND usuario_id = :uid), m.geom)
+                  AND NOT EXISTS (SELECT 1 FROM zonas_exclusion z
+                    WHERE z.potrero_id = :pid AND z.usuario_id = :uid AND ST_Covers(z.geom, m.geom))
                   AND m.fecha = (
                       SELECT MAX(fecha) FROM mapa_color
                       WHERE potrero_id = :pid AND usuario_id = :uid

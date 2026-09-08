@@ -1,0 +1,2 @@
+usuario_id,potrero_id,finca,nombre,tipo,wkt
+1,1,Finca Don Carlos,Represa,agua,"POLYGON((-61.0451 -15.95006,-61.04432 -15.95015,-61.04318 -15.94955,-61.04447 -15.94904,-61.0451 -15.95006))"

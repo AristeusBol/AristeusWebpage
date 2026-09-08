@@ -24,9 +24,3 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 include = ["api*", "core*", "repositorios*", "motor_analitico*"]
-
-[tool.pytest.ini_options]
-filterwarnings = [
-    "ignore::starlette.exceptions.StarletteDeprecationWarning",
-    "ignore:.*BlockingPortal.*:DeprecationWarning:starlette.testclient",
-]

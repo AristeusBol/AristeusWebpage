@@ -38,6 +38,41 @@ def test_mapa_tile_ok():
     assert params["fecha"] == datetime.date(2024, 4, 1)
 
 
+def test_mapa_tile_recorta_exclusiones():
+    """El tile debe excluir puntos en exclusión y recortar geometría (hueco)."""
+    eng, conn = _mock_mvt_engine(b"tile")
+    with patch("api.routers.mapa.engine", eng):
+        resp = client.get("/api/mapa/tiles/10/500/500.pbf?finca=F&fecha=2024-04-01&tipo_densidad=total", headers=auth_headers(1))
+    assert resp.status_code == 200
+    sql = str(conn.execute.call_args[0][0])
+    assert "zonas_exclusion" in sql
+    assert "NOT EXISTS" in sql
+    assert "ST_Difference" in sql
+    assert "ST_Covers" in sql
+
+
+def test_mapa_histograma_geojson_excluyen_exclusion():
+    """Histograma y GeoJSON no deben contar puntos dentro de exclusiones."""
+    from tests.test_histograma import _mock_hist_engine
+    eng, conn = _mock_hist_engine([10.0, 20.0])
+    with patch("api.routers.mapa.engine", eng):
+        client.get("/api/mapa/histograma?finca=F&fecha=2024-04-01&tipo_densidad=total&bins=5", headers=auth_headers(1))
+    for call in conn.execute.call_args_list:
+        sql = str(call[0][0])
+        if "mapa_color" in sql:
+            assert "zonas_exclusion" in sql
+            assert "NOT EXISTS" in sql
+    mock_conn = MagicMock()
+    mock_engine = MagicMock()
+    mock_engine.connect.return_value.__enter__.return_value = mock_conn
+    mock_conn.execute.return_value.fetchall.return_value = []
+    with patch("api.routers.mapa.engine", mock_engine):
+        client.get("/api/mapa/geojson?finca=F&fecha=2024-04-01&tipo_densidad=verde", headers=auth_headers(1))
+    sql = str(mock_conn.execute.call_args[0][0])
+    assert "zonas_exclusion" in sql
+    assert "NOT EXISTS" in sql
+
+
 def test_mapa_tile_tipos_densidad_whitelist():
     for tipo, columna in [("verde", "densidad_verde_g_m2"), ("muerta", "densidad_muerta_g_m2"), ("total", "densidad_total_g_m2")]:
         eng, conn = _mock_mvt_engine(b"tile")

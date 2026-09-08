@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from core.config import CORS_ORIGINS
-from api.routers import auth, calibracion, dashboard, filtros, mapa, potreros
+from api.routers import auth, calibracion, dashboard, filtros, mapa, parcelas, potreros
 from api.routers.calibracion import UPLOAD_DIR
 
 app = FastAPI(
@@ -26,6 +26,7 @@ app.include_router(filtros.router)
 app.include_router(mapa.router)
 app.include_router(dashboard.router)
 app.include_router(potreros.router)
+app.include_router(parcelas.router)
 app.include_router(calibracion.router)
 
 try:

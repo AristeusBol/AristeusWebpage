@@ -16,7 +16,7 @@ cp .env.example .env
 # POSTGRES_DB=foragemap
 # POSTGRES_HOST=localhost      # dentro de Docker Compose usa "db"
 # POSTGRES_PORT=5433           # host:5433 -> container:5432
-# CORS_ORIGINS=*               # coma-separado según frontend
+# CORS_ORIGINS=*               # coma-separado, ej: http://localhost:3000,http://localhost:5173
 # Opcionales (con defaults en core/config.py:24 e infraestructura/docker-compose.yml:32):
 # SECRET_KEY=dev-secret-key-change-in-production-please
 # ALGORITHM=HS256

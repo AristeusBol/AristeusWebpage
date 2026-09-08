@@ -27,7 +27,16 @@ def get_mapa_tile(
     tipo_densidad: str = Query(..., description="verde | muerta | total"),
     usuario_id_resuelto: int = Depends(get_current_user_id),
 ):
-    """Tile vectorial MVT con puntos de densidad. Devuelve protobuf."""
+    """Tile vectorial MVT con densidad como superficie continua.
+
+    Los puntos de `mapa_color` forman una grilla regular de ~10x10m, así que
+    cada punto se expande a su celda cuadrada (ST_Expand 5.05m), recortada
+    por el potrero (`potreros_base`) y por el tile. Al hacer zoom no quedan
+    huecos entre puntos: es relleno. Props por celda: {id, valor}.
+    Duplicados en la misma coordenada se resuelven con DISTINCT ON.
+    Las `zonas_exclusion` se recortan: ni puntos con centro dentro ni
+    geometría superpuesta generan relleno (hueco = satélite a la vista).
+    """
     tipo = tipo_densidad.strip().lower()
     if tipo not in TIPOS_VALIDOS:
         raise HTTPException(status_code=400, detail=f"tipo_densidad inválido. Use: {list(TIPOS_VALIDOS)}")
@@ -37,32 +46,89 @@ def get_mapa_tile(
     if not finca_norm:
         raise HTTPException(status_code=400, detail="finca requerida")
 
+    # Buffer en metros (SRID 3857) alrededor del tile: las celdas del borde
+    # necesitan cubrir hasta el borde exacto del tile; el recorte final
+    # se hace contra el tile exacto + el polígono del potrero.
+    buf_m = 20
+    # Media celda + 5cm de solape para que no se vean líneas de rejilla.
+    medio_lado_m = 5.05
+
     sql = text(f"""
+        WITH env AS (
+            SELECT ST_TileEnvelope(:z, :x, :y) AS tile,
+                   ST_Expand(ST_TileEnvelope(:z, :x, :y), :buf) AS tile_buf
+        ),
+        exc AS (
+            SELECT ST_Union(ST_Transform(geom, 3857)) AS u
+            FROM zonas_exclusion
+            WHERE usuario_id = :uid AND finca = :finca
+        ),
+        pts AS (
+            SELECT DISTINCT ON (mc.potrero_id, ST_X(mc.geom), ST_Y(mc.geom))
+                mc.id AS id,
+                mc.potrero_id AS potrero_id,
+                {columna} AS valor,
+                ST_Transform(mc.geom, 3857) AS g
+            FROM mapa_color mc, env
+            WHERE mc.usuario_id = :uid
+              AND mc.finca = :finca
+              AND mc.fecha = :fecha
+              AND {columna} IS NOT NULL
+              -- Prefiltro barato con índice GIST (idx_color_geom); el chequeo
+              -- exacto con ST_Transform va después.
+              AND mc.geom && ST_Transform(env.tile_buf, 4326)
+              AND ST_Intersects(
+                    ST_Transform(mc.geom, 3857),
+                    env.tile_buf
+                  )
+              AND NOT EXISTS (
+                    SELECT 1 FROM zonas_exclusion z
+                    WHERE z.usuario_id = :uid
+                      AND z.potrero_id = mc.potrero_id
+                      AND ST_Covers(z.geom, mc.geom)
+                  )
+            ORDER BY mc.potrero_id, ST_X(mc.geom), ST_Y(mc.geom), mc.id
+        ),
+        cell AS (
+            SELECT
+                ST_Intersection(
+                    ST_Expand(p.g, :medio_lado, :medio_lado),
+                    ST_Transform(pb.geom, 3857)
+                ) AS inter,
+                p.id AS id,
+                p.valor AS valor
+            FROM pts p
+            JOIN potreros_base pb
+              ON pb.id = p.potrero_id
+             AND pb.usuario_id = :uid
+            WHERE ST_Intersects(
+                    ST_Expand(p.g, :medio_lado, :medio_lado),
+                    (SELECT tile FROM env)
+                  )
+        )
         SELECT ST_AsMVT(mvt_q, 'densidad', 4096, 'geom') AS mvt
         FROM (
             SELECT
                 ST_AsMVTGeom(
-                    ST_Transform(geom, 3857),
-                    ST_TileEnvelope(:z, :x, :y),
-                    4096, 64, true
+                    CASE
+                        WHEN (SELECT u FROM exc) IS NULL THEN c.inter
+                        ELSE ST_Difference(c.inter, (SELECT u FROM exc))
+                    END,
+                    (SELECT tile FROM env),
+                    4096, 0, true
                 ) AS geom,
-                id,
-                {columna} AS valor
-            FROM mapa_color
-            WHERE usuario_id = :uid
-              AND finca = :finca
-              AND fecha = :fecha
-              AND {columna} IS NOT NULL
-              AND ST_Intersects(
-                    ST_Transform(geom, 3857),
-                    ST_TileEnvelope(:z, :x, :y)
-                  )
+                c.id AS id,
+                c.valor AS valor
+            FROM cell c
+            WHERE c.inter IS NOT NULL AND NOT ST_IsEmpty(c.inter)
         ) AS mvt_q
     """)
 
     with engine.connect() as conn:
         row = conn.execute(sql, {
             "z": z, "x": x, "y": y,
+            "buf": buf_m,
+            "medio_lado": medio_lado_m,
             "uid": usuario_id_resuelto,
             "finca": finca_norm,
             "fecha": fecha,
@@ -118,11 +184,14 @@ def get_mapa_histograma(
                MIN({columna}) AS vmin,
                MAX({columna}) AS vmax,
                AVG({columna}) AS vmean
-        FROM mapa_color
+        FROM mapa_color m
         WHERE usuario_id = :uid
           AND finca = :finca
           AND fecha = :fecha
           AND {columna} IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM zonas_exclusion z
+            WHERE z.usuario_id = m.usuario_id AND z.potrero_id = m.potrero_id
+              AND ST_Covers(z.geom, m.geom))
     """)
     with engine.connect() as conn:
         stats = conn.execute(stats_sql, {
@@ -166,11 +235,14 @@ def get_mapa_histograma(
 
     bins_sql = text(f"""
         SELECT WIDTH_BUCKET({columna}, :vmin, :vmax, :bins) AS bucket, COUNT(*) AS c
-        FROM mapa_color
+        FROM mapa_color m
         WHERE usuario_id = :uid
           AND finca = :finca
           AND fecha = :fecha
           AND {columna} IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM zonas_exclusion z
+            WHERE z.usuario_id = m.usuario_id AND z.potrero_id = m.potrero_id
+              AND ST_Covers(z.geom, m.geom))
         GROUP BY bucket
     """)
     with engine.connect() as conn:
@@ -230,11 +302,14 @@ def get_mapa_geojson(
 
     sql = text(f"""
         SELECT id, ST_AsGeoJSON(geom)::json AS geom_json, {columna} AS valor
-        FROM mapa_color
+        FROM mapa_color m
         WHERE usuario_id = :uid
           AND finca = :finca
           AND fecha = :fecha
           AND {columna} IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM zonas_exclusion z
+            WHERE z.usuario_id = m.usuario_id AND z.potrero_id = m.potrero_id
+              AND ST_Covers(z.geom, m.geom))
         LIMIT :lim
     """)
     with engine.connect() as conn:

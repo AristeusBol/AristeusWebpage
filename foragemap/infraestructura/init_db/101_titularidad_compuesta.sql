@@ -1,5 +1,7 @@
 BEGIN;
 
+UPDATE usuarios SET email = 'unknown+' || id || '@invalid.local' WHERE email IS NULL;
+
 DO $$ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint WHERE conname = 'usuarios_email_not_null'
