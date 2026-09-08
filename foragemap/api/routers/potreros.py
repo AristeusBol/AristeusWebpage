@@ -76,26 +76,39 @@ def get_potreros_geojson(
     if not finca_norm:
         raise HTTPException(status_code=400, detail="finca requerida")
 
-    sql = text("""
-        SELECT p.id, p.nombre, p.finca,
-               ST_AsGeoJSON(p.geom)::json AS geom_json,
-               ST_Area(p.geom::geography) / 10000.0 AS area_bruta_ha,
-               c.area_neta_ha, c.masa_seca_verde, c.masa_seca_muerta, c.masa_seca_total
-        FROM potreros_base p
-        LEFT JOIN calculos_stock c
-          ON c.potrero_id = p.id
-         AND c.usuario_id = p.usuario_id
-         AND (:fecha IS NULL OR c.fecha = :fecha)
-        WHERE p.usuario_id = :uid
-          AND p.finca = :finca
-        ORDER BY p.nombre ASC
-    """)
+    # Sin fecha: no joinear calculos_stock (evita fan-out: un feature por
+    # potrero con solo área bruta). Con fecha: join por igualdad exacta.
+    if fecha is None:
+        sql = text("""
+            SELECT p.id, p.nombre, p.finca,
+                   ST_AsGeoJSON(p.geom)::json AS geom_json,
+                   ST_Area(p.geom::geography) / 10000.0 AS area_bruta_ha,
+                   NULL::numeric AS area_neta_ha, NULL::numeric AS masa_seca_verde,
+                   NULL::numeric AS masa_seca_muerta, NULL::numeric AS masa_seca_total
+            FROM potreros_base p
+            WHERE p.usuario_id = :uid
+              AND p.finca = :finca
+            ORDER BY p.nombre ASC
+        """)
+        params = {"uid": usuario_id_resuelto, "finca": finca_norm}
+    else:
+        sql = text("""
+            SELECT p.id, p.nombre, p.finca,
+                   ST_AsGeoJSON(p.geom)::json AS geom_json,
+                   ST_Area(p.geom::geography) / 10000.0 AS area_bruta_ha,
+                   c.area_neta_ha, c.masa_seca_verde, c.masa_seca_muerta, c.masa_seca_total
+            FROM potreros_base p
+            LEFT JOIN calculos_stock c
+              ON c.potrero_id = p.id
+             AND c.usuario_id = p.usuario_id
+             AND c.fecha = :fecha
+            WHERE p.usuario_id = :uid
+              AND p.finca = :finca
+            ORDER BY p.nombre ASC
+        """)
+        params = {"uid": usuario_id_resuelto, "finca": finca_norm, "fecha": fecha}
     with engine.connect() as conn:
-        rows = conn.execute(sql, {
-            "uid": usuario_id_resuelto,
-            "finca": finca_norm,
-            "fecha": fecha,
-        }).fetchall()
+        rows = conn.execute(sql, params).fetchall()
 
     features = []
     for r in rows:
@@ -158,8 +171,22 @@ def crear_potrero(
 ):
     """Crea un potrero dibujado desde la interfaz. Devuelve {id, area_ha}."""
     gj = json.dumps(body.geom)
+    # Validación + inserción en UNA sola transacción: si la geometría es
+    # inválida o el área es insuficiente, se hace rollback y no queda
+    # ningún residuo visible para otras transacciones.
     try:
         with engine.begin() as conn:
+            chk_prev = conn.execute(
+                text("""
+                    SELECT ST_IsValid(ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326)) AS valida,
+                           ST_Area(ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326)::geography) / 10000.0 AS area_ha
+                """),
+                {"gj": gj},
+            ).fetchone()
+            if not chk_prev or not chk_prev.valida:
+                raise HTTPException(status_code=400, detail="Geometría inválida (autointersección). Redibujá el polígono.")
+            if float(chk_prev.area_ha or 0) < 0.01:
+                raise HTTPException(status_code=400, detail="Área mínima 0.01 ha. Dibujá un polígono más grande.")
             row = conn.execute(
                 text("""
                     INSERT INTO potreros_base (usuario_id, nombre, finca, geom)
@@ -174,33 +201,9 @@ def crear_potrero(
             status_code=409,
             detail=f"Ya existe un potrero '{body.nombre}' en '{body.finca}'",
         )
-    # Validación PostGIS: geometría válida y área mínima 0.01 ha
-    with engine.connect() as conn:
-        chk = conn.execute(
-            text("""
-                SELECT ST_IsValid(geom) AS valida,
-                       ST_Area(geom::geography) / 10000.0 AS area_ha
-                FROM potreros_base WHERE id = :id AND usuario_id = :uid
-            """),
-            {"id": row.id, "uid": uid},
-        ).fetchone()
-    if not chk.valida:
-        with engine.begin() as conn:
-            conn.execute(
-                text("DELETE FROM potreros_base WHERE id=:id AND usuario_id=:uid"),
-                {"id": row.id, "uid": uid},
-            )
-        raise HTTPException(status_code=400, detail="Geometría inválida (autointersección). Redibujá el polígono.")
-    if float(chk.area_ha) < 0.01:
-        with engine.begin() as conn:
-            conn.execute(
-                text("DELETE FROM potreros_base WHERE id=:id AND usuario_id=:uid"),
-                {"id": row.id, "uid": uid},
-            )
-        raise HTTPException(status_code=400, detail="Área mínima 0.01 ha. Dibujá un polígono más grande.")
     return {
         "id": row.id, "nombre": body.nombre, "finca": body.finca,
-        "area_ha": float(chk.area_ha),
+        "area_ha": float(row.area_ha),
     }
 
 
@@ -210,25 +213,55 @@ def actualizar_potrero(
     body: PotreroUpdate,
     uid: int = Depends(get_current_user_id),
 ):
-    """Renombra / cambia finca / redibuja geometría de un potrero propio."""
+    """Renombra / redibuja la geometría de un potrero propio.
+
+    La `finca` es inmutable: cambiarla rompería el invariante
+    `hija.finca == potreros_base.finca` que validan ingesta, tiles y
+    dashboard. Para mover un lote, crear uno nuevo en la otra finca.
+    """
     with engine.connect() as conn:
         existe = conn.execute(
-            text("SELECT id FROM potreros_base WHERE id=:pid AND usuario_id=:uid"),
+            text("SELECT id, finca FROM potreros_base WHERE id=:pid AND usuario_id=:uid"),
             {"pid": potrero_id, "uid": uid},
         ).fetchone()
     if not existe:
         raise HTTPException(status_code=404, detail=f"Potrero {potrero_id} no existe o no es tuyo")
+    if body.finca is not None and body.finca.strip() != (existe.finca or "").strip():
+        raise HTTPException(
+            status_code=400,
+            detail="La finca no se puede cambiar (rompe titularidad de mapa/cálculos/exclusiones/fotos). Creá un potrero nuevo en la otra finca.",
+        )
     sets = []
     params: dict = {"pid": potrero_id, "uid": uid}
     if body.nombre is not None:
         sets.append("nombre = :nombre")
         params["nombre"] = body.nombre
-    if body.finca is not None:
-        sets.append("finca = :finca")
-        params["finca"] = body.finca
     if body.geom is not None:
+        # Validar candidata ANTES de tocar la fila: validez, área mínima y
+        # que ninguna parcela hija quede fuera del nuevo borde. Todo o nada.
+        gj_cand = json.dumps(body.geom)
+        with engine.connect() as conn:
+            chk = conn.execute(
+                text("""
+                    SELECT ST_IsValid(ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326)) AS valida,
+                           ST_Area(ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326)::geography)/10000.0 AS area_ha,
+                           (SELECT COUNT(*) FROM parcelas
+                             WHERE usuario_id=:uid AND potrero_id=:pid
+                               AND NOT ST_Within(geom, ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326))) AS n_fuera
+                """),
+                {"gj": gj_cand, "pid": potrero_id, "uid": uid},
+            ).fetchone()
+        if not chk or not chk.valida:
+            raise HTTPException(status_code=400, detail="Geometría inválida (autointersección)")
+        if float(chk.area_ha or 0) < 0.01:
+            raise HTTPException(status_code=400, detail="Área mínima 0.01 ha. Dibujá un polígono más grande.")
+        if chk.n_fuera and int(chk.n_fuera or 0) > 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"El nuevo borde deja {int(chk.n_fuera)} parcela(s) fuera. Ajustá las parcelas primero.",
+            )
         sets.append("geom = ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326)")
-        params["gj"] = json.dumps(body.geom)
+        params["gj"] = gj_cand
     if not sets:
         raise HTTPException(status_code=400, detail="Nada para actualizar")
     try:
@@ -239,32 +272,6 @@ def actualizar_potrero(
             )
     except IntegrityError:
         raise HTTPException(status_code=409, detail="Ya existe un potrero con ese nombre en la finca")
-    # Si cambió la geometría: validar + verificar que las parcelas hijas sigan dentro
-    if body.geom is not None:
-        with engine.connect() as conn:
-            chk = conn.execute(
-                text("""
-                    SELECT ST_IsValid(geom) AS valida,
-                           ST_Area(geom::geography)/10000.0 AS area_ha
-                    FROM potreros_base WHERE id=:pid AND usuario_id=:uid
-                """),
-                {"pid": potrero_id, "uid": uid},
-            ).fetchone()
-            fuera = conn.execute(
-                text("""
-                    SELECT COUNT(*) AS n FROM parcelas
-                    WHERE usuario_id=:uid AND potrero_id=:pid
-                      AND NOT ST_Within(geom, (SELECT geom FROM potreros_base WHERE id=:pid AND usuario_id=:uid))
-                """),
-                {"pid": potrero_id, "uid": uid},
-            ).fetchone()
-        if not chk.valida:
-            raise HTTPException(status_code=400, detail="Geometría inválida (autointersección)")
-        if fuera and int(fuera.n or 0) > 0:
-            raise HTTPException(
-                status_code=400,
-                detail=f"El nuevo borde deja {int(fuera.n)} parcela(s) fuera. Ajustá las parcelas primero.",
-            )
     with engine.connect() as conn:
         row = conn.execute(
             text("""
@@ -281,7 +288,9 @@ def eliminar_potrero(
     potrero_id: int,
     uid: int = Depends(get_current_user_id),
 ):
-    """Elimina un potrero propio (cascada a parcelas por FK)."""
+    """Elimina un potrero propio (cascada a parcelas por FK) + archivos huérfanos."""
+    from api.routers.calibracion import UPLOAD_DIR
+
     with engine.connect() as conn:
         row = conn.execute(
             text("""
@@ -292,6 +301,10 @@ def eliminar_potrero(
             """),
             {"pid": potrero_id, "uid": uid},
         ).fetchone()
+        fotos = conn.execute(
+            text("SELECT foto_path FROM fotos_calibracion WHERE usuario_id=:uid AND potrero_id=:pid"),
+            {"pid": potrero_id, "uid": uid},
+        ).fetchall() if row else []
     if not row:
         raise HTTPException(status_code=404, detail=f"Potrero {potrero_id} no existe o no es tuyo")
     with engine.begin() as conn:
@@ -299,10 +312,26 @@ def eliminar_potrero(
             text("DELETE FROM potreros_base WHERE id=:pid AND usuario_id=:uid"),
             {"pid": potrero_id, "uid": uid},
         )
+    # Limpieza de disco: las filas se fueron por CASCADE, los bytes no.
+    fotos_borradas = 0
+    for f in fotos:
+        try:
+            rel = (f.foto_path or "")
+            # Solo paths propios con forma uid/archivo (anti path-traversal).
+            base = (UPLOAD_DIR / str(uid)).resolve()
+            cand = (UPLOAD_DIR / rel).resolve()
+            if cand.parent == base and cand.is_file():
+                cand.unlink()
+                fotos_borradas += 1
+        except OSError:
+            continue
+        except ValueError:
+            continue
     return {
         "id": potrero_id, "eliminado": True,
         "parcelas_eliminadas": int(row.n_parc or 0),
         "calculos_eliminados": int(row.n_calc or 0),
+        "fotos_eliminadas": fotos_borradas,
     }
 
 
@@ -317,19 +346,33 @@ def detalle_potrero_gestion(
     El prorrateo estima cada parcela como `t/ha del potrero × área parcela`.
     """
     with engine.connect() as conn:
-        pot = conn.execute(
-            text("""
-                SELECT p.id, p.nombre, p.finca,
-                       ST_AsGeoJSON(p.geom)::json AS geom_json,
-                       ST_Area(p.geom::geography)/10000.0 AS area_bruta_ha,
-                       c.area_neta_ha, c.masa_seca_verde, c.masa_seca_muerta, c.masa_seca_total
-                FROM potreros_base p
-                LEFT JOIN calculos_stock c ON c.potrero_id=p.id AND c.usuario_id=p.usuario_id
-                       AND (:fecha IS NULL OR c.fecha=:fecha)
-                WHERE p.id=:pid AND p.usuario_id=:uid
-            """),
-            {"pid": potrero_id, "uid": uid, "fecha": fecha},
-        ).fetchone()
+        if fecha is None:
+            pot = conn.execute(
+                text("""
+                    SELECT p.id, p.nombre, p.finca,
+                           ST_AsGeoJSON(p.geom)::json AS geom_json,
+                           ST_Area(p.geom::geography)/10000.0 AS area_bruta_ha,
+                           NULL::numeric AS area_neta_ha, NULL::numeric AS masa_seca_verde,
+                           NULL::numeric AS masa_seca_muerta, NULL::numeric AS masa_seca_total
+                    FROM potreros_base p
+                    WHERE p.id=:pid AND p.usuario_id=:uid
+                """),
+                {"pid": potrero_id, "uid": uid},
+            ).fetchone()
+        else:
+            pot = conn.execute(
+                text("""
+                    SELECT p.id, p.nombre, p.finca,
+                           ST_AsGeoJSON(p.geom)::json AS geom_json,
+                           ST_Area(p.geom::geography)/10000.0 AS area_bruta_ha,
+                           c.area_neta_ha, c.masa_seca_verde, c.masa_seca_muerta, c.masa_seca_total
+                    FROM potreros_base p
+                    LEFT JOIN calculos_stock c ON c.potrero_id=p.id AND c.usuario_id=p.usuario_id
+                           AND c.fecha=:fecha
+                    WHERE p.id=:pid AND p.usuario_id=:uid
+                """),
+                {"pid": potrero_id, "uid": uid, "fecha": fecha},
+            ).fetchone()
         if not pot:
             raise HTTPException(status_code=404, detail=f"Potrero {potrero_id} no existe o no es tuyo")
         calc = None

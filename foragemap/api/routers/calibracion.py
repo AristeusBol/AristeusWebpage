@@ -1,13 +1,17 @@
 import os
+import re
 import uuid
 from datetime import date
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi.responses import FileResponse
+from jose import jwt
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
+from core.config import ALGORITHM, SECRET_KEY
 from core.db import engine
 from core.seguridad import get_current_user_id
 from repositorios import potreros as repo_potreros
@@ -22,6 +26,14 @@ except OSError:
     pass
 
 MAX_BYTES = 25 * 1024 * 1024
+# Cuotas anti-DoS de disco (configurables por env).
+MAX_FOTOS_POR_POTRERO = int(os.environ.get("MAX_FOTOS_POR_POTRERO", "200"))
+MAX_BYTES_POR_USUARIO = int(os.environ.get("MAX_BYTES_POR_USUARIO", str(500 * 1024 * 1024)))
+_NOMBRE_ARCHIVO_RE = re.compile(r"^[0-9a-f]{32}\.(jpg|png|webp|heic|heif|tif)$")
+_EXT_A_MIME = {
+    ".jpg": "image/jpeg", ".png": "image/png", ".webp": "image/webp",
+    ".heic": "image/heic", ".heif": "image/heif", ".tif": "image/tiff",
+}
 MIME_A_EXT = {
     "image/jpeg": ".jpg",
     "image/png": ".png",
@@ -45,6 +57,77 @@ def _detectar_mime(contenido: bytes) -> Optional[str]:
     if len(contenido) >= 12 and contenido[4:8] == b"ftyp" and contenido[8:12] in MARCAS_HEIC:
         return "image/heic"
     return None
+
+
+def _uso_disco_usuario(uid: int) -> int:
+    """Bytes totales en uploads/{uid}. 0 si no existe o ante error."""
+    base = UPLOAD_DIR / str(uid)
+    try:
+        if not base.is_dir():
+            return 0
+        return sum(f.stat().st_size for f in base.iterdir() if f.is_file())
+    except OSError:
+        return 0
+
+
+def _resolver_uid_archivo(request: Request) -> int:
+    """Auth para <img>: Bearer header o ?token= (query, para tags sin headers)."""
+    auth = request.headers.get("authorization", "")
+    token = None
+    if auth.lower().startswith("bearer "):
+        token = auth[7:].strip()
+    elif request.query_params.get("token"):
+        token = request.query_params.get("token")
+    if not token:
+        raise HTTPException(status_code=401, detail="No autenticado: enviá Bearer token")
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except Exception:
+        raise HTTPException(status_code=401, detail="Token inválido")
+    try:
+        uid = int(payload.get("sub"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=401, detail="Token inválido: sin sub")
+    with engine.connect() as conn:
+        existe = conn.execute(text("SELECT 1 FROM usuarios WHERE id = :uid"), {"uid": uid}).fetchone()
+    if not existe:
+        raise HTTPException(status_code=401, detail="Usuario inexistente")
+    return uid
+
+
+@router.get("/uploads/{uid_path}/{nombre}")
+def servir_foto_privada(uid_path: int, nombre: str, request: Request):
+    """Sirve una foto solo a su dueño (reemplaza el StaticFiles público).
+
+    Acepta `Authorization: Bearer` o `?token=` para que <img> funcione.
+    """
+    uid = _resolver_uid_archivo(request)
+    if uid != uid_path:
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    if not _NOMBRE_ARCHIVO_RE.match(nombre):
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    destino = UPLOAD_DIR / str(uid_path) / nombre
+    try:
+        resuelto = destino.resolve()
+        if resuelto.parent != (UPLOAD_DIR / str(uid_path)).resolve():
+            raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    except OSError:
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    if not resuelto.is_file():
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    # Titularidad a nivel de fila: el path debe existir en DB para ese usuario.
+    with engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT 1 FROM fotos_calibracion WHERE usuario_id=:uid AND foto_path=:p"),
+            {"uid": uid, "p": f"{uid_path}/{nombre}"},
+        ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    return FileResponse(
+        path=str(resuelto),
+        media_type=_EXT_A_MIME.get(resuelto.suffix.lower(), "application/octet-stream"),
+        headers={"Cache-Control": "private, max-age=300"},
+    )
 
 
 @router.get("/api/potreros")
@@ -119,6 +202,17 @@ async def subir_foto_calibracion(
     mime = _detectar_mime(contenido)
     if mime is None:
         raise HTTPException(status_code=400, detail="El archivo no es una imagen válida (jpg/png/webp/heic/tif)")
+
+    # Cuotas: cantidad por potrero y bytes totales por usuario (anti-DoS disco).
+    with engine.connect() as conn:
+        n_fotos = conn.execute(
+            text("SELECT COUNT(*) AS n FROM fotos_calibracion WHERE usuario_id=:uid AND potrero_id=:pid"),
+            {"uid": uid, "pid": potrero_id},
+        ).fetchone()
+    if n_fotos and int(n_fotos.n or 0) >= MAX_FOTOS_POR_POTRERO:
+        raise HTTPException(status_code=409, detail=f"Límite de {MAX_FOTOS_POR_POTRERO} fotos por potrero alcanzado")
+    if _uso_disco_usuario(uid) + len(contenido) > MAX_BYTES_POR_USUARIO:
+        raise HTTPException(status_code=413, detail="Cuota de almacenamiento excedida")
 
     nombre_archivo = f"{uuid.uuid4().hex}{MIME_A_EXT[mime]}"
     destino = UPLOAD_DIR / str(uid) / nombre_archivo

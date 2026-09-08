@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 from core.config import CORS_ORIGINS
 from api.routers import auth, calibracion, dashboard, filtros, mapa, parcelas, potreros
@@ -33,8 +32,8 @@ try:
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 except OSError:
     pass
-if UPLOAD_DIR.exists():
-    app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+# /uploads se sirve con auth en api/routers/calibracion.py:servir_foto_privada
+# (Bearer o ?token=). No montar StaticFiles público: expondría fotos privadas.
 
 
 @app.get("/", tags=["health"])
