@@ -1,0 +1,26 @@
+---
+import SectionTitle from '../shared/SectionTitle.astro';
+import ContactForm from '../shared/ContactForm.astro';
+import ScrollReveal from '../animations/ScrollReveal.astro';
+---
+
+<section class="py-20 md:py-32 bg-[linear-gradient(180deg,rgba(216,222,227,0.6)_0%,rgba(245,247,244,1)_52%,rgba(107,165,57,0.08)_100%)]" id="contacto">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <ScrollReveal>
+      <div class="text-center mb-12">
+        <h2 class="font-heading text-3xl md:text-4xl lg:text-5xl font-bold text-text-primary mb-4">
+          Solicita tu análisis gratuito de 100 hectáreas
+        </h2>
+        <p class="text-text-secondary text-lg md:text-xl max-w-2xl mx-auto">
+          Sin compromiso. Recibe un reporte de biomasa de tu campo en 72 horas.
+        </p>
+      </div>
+    </ScrollReveal>
+    
+    <ScrollReveal animation="fade-up" delay={200}>
+      <div class="glass rounded-2xl p-6 md:p-10">
+        <ContactForm formName="contact-cta" variant="full" />
+      </div>
+    </ScrollReveal>
+  </div>
+</section>

@@ -1,0 +1,62 @@
+---
+interface Props {
+  text: string;
+  href?: string;
+  variant?: 'primary' | 'secondary' | 'outline';
+  color?: 'green' | 'gold' | 'navy' | 'white';
+  size?: 'sm' | 'md' | 'lg';
+  type?: 'button' | 'submit';
+  class?: string;
+}
+
+const { 
+  text, 
+  href, 
+  variant = 'primary', 
+  color = 'green',
+  size = 'md',
+  type = 'button',
+  class: className = ''
+} = Astro.props;
+
+const baseStyles = 'inline-flex items-center justify-center font-medium transition-smooth rounded-lg';
+
+const sizeStyles = {
+  sm: 'px-4 py-2 text-sm',
+  md: 'px-6 py-3 text-base',
+  lg: 'px-8 py-4 text-lg'
+};
+
+const variantStyles = {
+  primary: {
+    green: 'bg-aristeus-green text-text-inverse hover:brightness-110',
+    gold: 'bg-cv-gold text-text-inverse hover:brightness-110',
+    navy: 'bg-aristeus-navy text-text-inverse hover:brightness-110',
+    white: 'bg-text-inverse text-aristeus-navy hover:brightness-95'
+  },
+  secondary: {
+    green: 'bg-transparent border-2 border-aristeus-green text-aristeus-green hover:bg-aristeus-green hover:text-text-inverse',
+    gold: 'bg-transparent border-2 border-cv-gold text-cv-gold hover:bg-cv-gold hover:text-text-inverse',
+    navy: 'bg-transparent border-2 border-aristeus-navy text-aristeus-navy hover:bg-aristeus-navy hover:text-text-inverse',
+    white: 'bg-transparent border-2 border-text-inverse text-text-inverse hover:bg-text-inverse hover:text-aristeus-navy'
+  },
+  outline: {
+    green: 'bg-transparent border border-aristeus-green text-aristeus-green hover:bg-aristeus-green/10',
+    gold: 'bg-transparent border border-cv-gold text-cv-gold hover:bg-cv-gold/10',
+    navy: 'bg-transparent border border-aristeus-navy text-aristeus-navy hover:bg-aristeus-navy/10',
+    white: 'bg-transparent border border-text-inverse text-text-inverse hover:bg-text-inverse/10'
+  }
+};
+
+const classes = `${baseStyles} ${sizeStyles[size]} ${variantStyles[variant][color]} ${className}`;
+---
+
+{href ? (
+  <a href={href} class={classes}>
+    {text}
+  </a>
+) : (
+  <button type={type} class={classes}>
+    {text}
+  </button>
+)}

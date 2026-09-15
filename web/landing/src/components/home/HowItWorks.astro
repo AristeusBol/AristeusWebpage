@@ -1,0 +1,64 @@
+---
+import SectionTitle from '../shared/SectionTitle.astro';
+import ScrollReveal from '../animations/ScrollReveal.astro';
+import Icon from '../icons/Icon';
+---
+
+<section class="py-20 md:py-32 bg-bg-secondary" id="como-funciona">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <ScrollReveal>
+      <SectionTitle 
+        title="De la imagen aerea a tu plan de pastoreo en 3 pasos"
+        align="center"
+        class="mb-16"
+      />
+    </ScrollReveal>
+    
+    <div class="grid md:grid-cols-3 gap-8 relative">
+      <!-- Connecting line (hidden on mobile) -->
+      <div class="hidden md:block absolute top-24 left-[16.67%] right-[16.67%] h-0.5 bg-gradient-to-r from-aristeus-navy/30 via-aristeus-green/70 to-aristeus-navy/30"></div>
+      
+      <!-- Step 1 -->
+      <ScrollReveal animation="fade-up" delay={0}>
+        <div class="relative text-center">
+           <div class="w-16 h-16 mx-auto mb-6 rounded-full bg-aristeus-navy text-text-inverse border-2 border-aristeus-green shadow-[0_10px_24px_rgba(11,35,65,0.16)] flex items-center justify-center relative z-10">
+             <span class="text-2xl"><Icon name="drone" class="w-6 h-6" client:only="react" /></span>
+           </div>
+          <div class="font-data text-5xl font-bold text-aristeus-green/20 absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 z-0">01</div>
+          <h3 class="font-heading text-xl font-semibold text-text-primary mb-3">Capturamos</h3>
+          <p class="text-text-secondary text-sm leading-relaxed">
+            Obtenemos imágenes multiespectrales de tus potreros Relevamiento aéreo de alta resolución por ciclo de pastoreo empleando drones.
+          </p>
+        </div>
+      </ScrollReveal>
+      
+      <!-- Step 2 -->
+      <ScrollReveal animation="fade-up" delay={200}>
+        <div class="relative text-center">
+           <div class="w-16 h-16 mx-auto mb-6 rounded-full bg-aristeus-navy text-text-inverse border-2 border-aristeus-green shadow-[0_10px_24px_rgba(11,35,65,0.16)] flex items-center justify-center relative z-10">
+             <span class="text-2xl"><Icon name="brain" class="w-6 h-6" client:only="react" /></span>
+           </div>
+          <div class="font-data text-5xl font-bold text-aristeus-green/20 absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 z-0">02</div>
+          <h3 class="font-heading text-xl font-semibold text-text-primary mb-3">Analizamos</h3>
+          <p class="text-text-secondary text-sm leading-relaxed">
+            Nuestro modelo de ML procesa las imágenes para estimar biomasa disponible y contenido nutricional
+          </p>
+        </div>
+      </ScrollReveal>
+      
+      <!-- Step 3 -->
+      <ScrollReveal animation="fade-up" delay={400}>
+        <div class="relative text-center">
+           <div class="w-16 h-16 mx-auto mb-6 rounded-full bg-aristeus-navy text-text-inverse border-2 border-aristeus-green shadow-[0_10px_24px_rgba(11,35,65,0.16)] flex items-center justify-center relative z-10">
+             <span class="text-2xl"><Icon name="notebookPen" class="w-6 h-6" client:only="react" /></span>
+           </div>
+          <div class="font-data text-5xl font-bold text-aristeus-green/20 absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 z-0">03</div>
+          <h3 class="font-heading text-xl font-semibold text-text-primary mb-3">Planificamos</h3>
+          <p class="text-text-secondary text-sm leading-relaxed">
+            Recibes un plan de rotación optimizado: qué potrero usar, cuántas cabezas, por cuántos días
+          </p>
+        </div>
+      </ScrollReveal>
+    </div>
+  </div>
+</section>

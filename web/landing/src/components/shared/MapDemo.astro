@@ -1,0 +1,31 @@
+---
+import MapDemoReact from './MapDemoReact.tsx';
+---
+
+<section class="py-20 md:py-32 bg-bg-primary" id="demo-mapa">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-12">
+      <h2 class="font-heading text-3xl md:text-4xl lg:text-5xl font-bold text-text-primary mb-4">
+        Visualiza tu campo como nunca antes
+      </h2>
+      <p class="text-text-secondary text-lg max-w-2xl mx-auto">
+        Demo interactiva con datos reales de monitoreo. Explora las capas de análisis forrajero y asignación de potreros.
+      </p>
+    </div>
+    
+    <!-- React Island - client only, no SSR -->
+    <MapDemoReact 
+      client:only="react" 
+      herdPlan={{
+        herdId: '#1',
+        originPasture: 'Potrero #9',
+        daysUntilMove: 3,
+        targetPasture: 'Potrero #12'
+      }}
+    />
+    
+    <p class="text-center text-text-secondary text-sm mt-4">
+      Demo ilustrativa con datos de ejemplo
+    </p>
+  </div>
+</section>

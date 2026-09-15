@@ -1,0 +1,69 @@
+---
+import Button from '../shared/Button.astro';
+import ScrollReveal from '../animations/ScrollReveal.astro';
+---
+
+<section class="relative min-h-[70vh] flex items-center overflow-hidden" id="cattlevision">
+  <!-- Background -->
+  <div class="absolute inset-0 bg-cv-dark">
+    <div class="absolute inset-0 opacity-30" style="background-image: radial-gradient(circle at 50% 50%, rgba(107,165,57,0.2) 0%, transparent 50%);"></div>
+    <!-- Wireframe grid effect -->
+    <div class="absolute inset-0 opacity-10" style="background-image: linear-gradient(rgba(107,165,57,0.28) 1px, transparent 1px), linear-gradient(90deg, rgba(107,165,57,0.28) 1px, transparent 1px); background-size: 50px 50px;"></div>
+  </div>
+  
+  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+    <div class="grid lg:grid-cols-2 gap-12 items-center">
+      <ScrollReveal animation="slide-right">
+        <div class="flex items-center gap-4 mb-6">
+          <div class="w-16 h-16 rounded-2xl bg-cv-charcoal border-2 border-cv-gold flex items-center justify-center shadow-lg shadow-cv-gold/20">
+            <span class="text-3xl">🐂</span>
+          </div>
+          <div>
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cv-gold/50 text-cv-gold text-sm font-medium">
+              <span class="w-2 h-2 rounded-full bg-cv-gold"></span>
+              PRÓXIMAMENTE
+            </span>
+          </div>
+        </div>
+        
+        <h1 class="font-heading text-4xl md:text-5xl lg:text-6xl font-bold text-text-primary mb-6 leading-tight">
+          CattleVision
+          <span class="block text-cv-gold">El peso de tu ganado, sin tocarlo</span>
+        </h1>
+        
+        <p class="text-text-secondary text-lg md:text-xl mb-8 max-w-xl">
+          Estimación de peso con drones + LiDAR + visión artificial. Sin estrés animal, sin corrales, sin tiempo perdido.
+        </p>
+        
+        <Button 
+          text="Registrarse para acceso temprano" 
+          href="/contacto" 
+          variant="primary" 
+          color="gold" 
+          size="lg"
+        />
+      </ScrollReveal>
+      
+      <ScrollReveal animation="fade-in" delay={300}>
+        <div class="glass rounded-2xl p-6 bg-cv-charcoal/50 backdrop-blur-xl border-cv-gold/30">
+          <!-- Tech visualization placeholder -->
+          <div class="aspect-video rounded-xl bg-gradient-to-br from-cv-charcoal to-cv-dark flex items-center justify-center relative overflow-hidden">
+            <div class="absolute inset-0 opacity-30">
+              <svg viewBox="0 0 400 300" class="w-full h-full">
+                <polygon points="150,100 250,100 280,200 120,200" fill="none" stroke="currentColor" stroke-width="2" opacity="0.5"/>
+                <polygon points="170,130 230,130 245,180 155,180" fill="none" stroke="currentColor" stroke-width="1" opacity="0.3"/>
+                <circle cx="200" cy="150" r="60" fill="none" stroke="currentColor" stroke-width="1" opacity="0.2"/>
+                <line x1="100" y1="50" x2="300" y2="250" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
+                <line x1="300" y1="50" x2="100" y2="250" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
+              </svg>
+            </div>
+            <div class="text-center z-10">
+              <span class="text-6xl mb-4 block">🐂</span>
+              <p class="text-cv-gold font-data text-sm">Wireframe 3D + LiDAR Scan</p>
+            </div>
+          </div>
+        </div>
+      </ScrollReveal>
+    </div>
+  </div>
+</section>

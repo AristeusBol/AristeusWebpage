@@ -1,0 +1,159 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SectionTitle from '../components/shared/SectionTitle.astro';
+import ScrollReveal from '../components/animations/ScrollReveal.astro';
+import Button from '../components/shared/Button.astro';
+import Icon from '../components/icons/Icon';
+---
+
+<BaseLayout title="Nosotros" description="Tecnología boliviana para el campo latinoamericano. Conoce el equipo detrás de Aristeus.">
+  <!-- Hero -->
+  <section class="relative py-20 md:py-32 bg-gradient-to-b from-aristeus-navy/30 to-bg-primary">
+    <div class="max-w-4xl mx-auto px-4 text-center">
+      <ScrollReveal>
+        <h1 class="font-heading text-4xl md:text-5xl lg:text-6xl font-bold text-text-primary mb-6">
+          Tecnología boliviana para el campo latinoamericano
+        </h1>
+        <p class="text-text-secondary text-lg md:text-xl max-w-2xl mx-auto">
+          Nacimos en Santa Cruz, validamos en Australia, y volvimos para transformar la ganadería de Bolivia.
+        </p>
+      </ScrollReveal>
+    </div>
+  </section>
+
+  <!-- Mission & Vision -->
+  <section class="py-20 bg-bg-secondary">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid md:grid-cols-2 gap-12">
+        <ScrollReveal animation="slide-right">
+          <div class="glass rounded-2xl p-8 h-full">
+            <div class="w-12 h-12 rounded-xl bg-aristeus-navy flex items-center justify-center mb-6">
+              <span class="text-2xl"><Icon name="goal" class="w-6 h-6" client:only="react" /></span>
+            </div>
+            <h2 class="font-heading text-2xl font-bold text-text-primary mb-4">Misión</h2>
+            <p class="text-text-secondary leading-relaxed">
+              Democratizar el acceso a tecnología de precisión para ganaderos de Latinoamérica, aumentando la rentabilidad y sostenibilidad de sus operaciones a través de datos aéreos e inteligencia artificial.
+            </p>
+          </div>
+        </ScrollReveal>
+        
+        <ScrollReveal animation="slide-left" delay={200}>
+          <div class="glass rounded-2xl p-8 h-full">
+            <div class="w-12 h-12 rounded-xl bg-aristeus-navy flex items-center justify-center mb-6">
+              <span class="text-2xl">🌍</span>
+            </div>
+            <h2 class="font-heading text-2xl font-bold text-text-primary mb-4">Visión</h2>
+            <p class="text-text-secondary leading-relaxed">
+              Ser la plataforma de referencia en agtech para ganadería tropical, presente en los principales países productores de la región, transformando millones de hectáreas en operaciones rentables y sostenibles.
+            </p>
+          </div>
+        </ScrollReveal>
+      </div>
+    </div>
+  </section>
+
+  <!-- Timeline -->
+  <section class="py-20 bg-bg-primary">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <ScrollReveal>
+        <SectionTitle title="Nuestra historia" align="center" class="mb-16" />
+      </ScrollReveal>
+      
+      <div class="space-y-8">
+        <ScrollReveal animation="fade-up" delay={0}>
+          <div class="flex gap-6">
+            <div class="flex-shrink-0 w-20 text-right">
+              <span class="font-data text-aristeus-green font-bold">2022</span>
+            </div>
+            <div class="flex-shrink-0 w-4 h-4 rounded-full bg-aristeus-green mt-1"></div>
+            <div class="flex-grow glass rounded-xl p-6">
+              <h3 class="font-heading font-semibold text-text-primary mb-2">Validación en Australia</h3>
+              <p class="text-text-secondary text-sm">Desarrollo y validación inicial del modelo de ML con datos de pastizales australianos.</p>
+            </div>
+          </div>
+        </ScrollReveal>
+        
+        <ScrollReveal animation="fade-up" delay={100}>
+          <div class="flex gap-6">
+            <div class="flex-shrink-0 w-20 text-right">
+              <span class="font-data text-aristeus-green font-bold">2023</span>
+            </div>
+            <div class="flex-shrink-0 w-4 h-4 rounded-full bg-aristeus-green mt-1"></div>
+            <div class="flex-grow glass rounded-xl p-6">
+              <h3 class="font-heading font-semibold text-text-primary mb-2">Piloto en Bolivia</h3>
+              <p class="text-text-secondary text-sm">Primeros pilotos en Santa Cruz con ganaderos locales. Adaptación del modelo a pastizales tropicales.</p>
+            </div>
+          </div>
+        </ScrollReveal>
+        
+        <ScrollReveal animation="fade-up" delay={200}>
+          <div class="flex gap-6">
+            <div class="flex-shrink-0 w-20 text-right">
+              <span class="font-data text-aristeus-green font-bold">2024</span>
+            </div>
+            <div class="flex-shrink-0 w-4 h-4 rounded-full bg-aristeus-green mt-1"></div>
+            <div class="flex-grow glass rounded-xl p-6">
+              <h3 class="font-heading font-semibold text-text-primary mb-2">Lanzamiento Grass Gauge</h3>
+              <p class="text-text-secondary text-sm">Producto comercial disponible. +10,000 hectáreas analizadas.</p>
+            </div>
+          </div>
+        </ScrollReveal>
+        
+        <ScrollReveal animation="fade-up" delay={300}>
+          <div class="flex gap-6">
+            <div class="flex-shrink-0 w-20 text-right">
+              <span class="font-data text-aristeus-green font-bold">2025</span>
+            </div>
+            <div class="flex-shrink-0 w-4 h-4 rounded-full bg-cv-gold mt-1"></div>
+            <div class="flex-grow glass rounded-xl p-6 border border-cv-gold/30">
+              <h3 class="font-heading font-semibold text-text-primary mb-2">Desarrollo Cattle Vision</h3>
+              <p class="text-text-secondary text-sm">Trabajando en pesaje de ganado con drones y LiDAR. Próximamente disponible.</p>
+            </div>
+          </div>
+        </ScrollReveal>
+      </div>
+    </div>
+  </section>
+
+  <!-- Map location -->
+  <section class="py-20 bg-bg-secondary">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <ScrollReveal>
+        <div class="text-center mb-12">
+          <h2 class="font-heading text-3xl font-bold text-text-primary mb-4">Nuestra base</h2>
+          <p class="text-text-secondary">Santa Cruz de la Sierra, Bolivia — Corazón ganadero del país</p>
+        </div>
+      </ScrollReveal>
+      
+      <ScrollReveal animation="fade-in">
+        <div class="glass rounded-2xl p-2 aspect-video max-w-4xl mx-auto">
+          <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d121695.4348707857!2d-63.25119685!3d-17.7831675!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x93f1e81c8f139cab%3A0x79763652e3a2978c!2sSanta%20Cruz%20de%20la%20Sierra%2C%20Bolivia!5e0!3m2!1ses!2sus!4v1700000000000!5m2!1ses!2sus"
+            width="100%"
+            height="100%"
+            style="border:0; border-radius: 12px;"
+            allowfullscreen=""
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            class="rounded-xl"
+          ></iframe>
+        </div>
+      </ScrollReveal>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-20 bg-gradient-to-b from-bg-secondary to-bg-primary">
+    <div class="max-w-4xl mx-auto px-4 text-center">
+      <ScrollReveal>
+        <h2 class="font-heading text-3xl md:text-4xl font-bold text-text-primary mb-6">
+          ¿Quieres unirte al equipo?
+        </h2>
+        <p class="text-text-secondary text-lg mb-8">
+          Buscamos talento apasionado por la tecnología y el agro.
+        </p>
+        <Button text="Trabaja con nosotros" href="/contacto" variant="primary" color="green" size="lg" />
+      </ScrollReveal>
+    </div>
+  </section>
+</BaseLayout>

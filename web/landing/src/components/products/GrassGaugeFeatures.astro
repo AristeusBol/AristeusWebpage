@@ -1,0 +1,119 @@
+---
+import SectionTitle from '../shared/SectionTitle.astro';
+import FeatureCard from '../shared/FeatureCard.astro';
+import Button from '../shared/Button.astro';
+import ScrollReveal from '../animations/ScrollReveal.astro';
+import { iconStrings } from '../icons/Icon';
+---
+
+<section class="py-20 md:py-32 bg-bg-secondary">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <ScrollReveal>
+      <SectionTitle 
+        title="Todo lo que necesitas para optimizar tu pastoreo"
+        subtitle="Características diseñadas para ganaderos que toman decisiones basadas en datos"
+        align="center"
+        class="mb-16"
+      />
+    </ScrollReveal>
+    
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+      <ScrollReveal animation="fade-up" delay={0}>
+        <FeatureCard 
+          icon={iconStrings.chartColumn}
+          title="Estimación de biomasa por potrero"
+          description="Conocimiento preciso de kilogramos de materia seca disponible en cada parcela, actualizado por ciclo de pastoreo"
+          accentColor="green"
+        />
+      </ScrollReveal>
+      
+      <ScrollReveal animation="fade-up" delay={100}>
+        <FeatureCard 
+          icon="🧪"
+          title="Análisis nutricional"
+          description="Proteína, fibra y energía estimadas para asegurar que tu ganado reciba la alimentación óptima."
+          accentColor="green"
+        />
+      </ScrollReveal>
+      
+      <ScrollReveal animation="fade-up" delay={200}>
+        <FeatureCard 
+          icon={iconStrings.notebookPen}
+          title="Plan de rotación automático"
+          description="Algoritmo que genera tu calendario de pastoreo óptimo: qué potrero, cuántas cabezas, por cuántos días."
+          accentColor="green"
+        />
+      </ScrollReveal>
+      
+      <ScrollReveal animation="fade-up" delay={300}>
+        <FeatureCard 
+          icon="⚠️"
+          title="Alertas de sobrepastoreo"
+          description="Notificaciones cuando un potrero está próximo a ser sobreutilizado, antes de que ocurra daño."
+          accentColor="green"
+        />
+      </ScrollReveal>
+      
+      <ScrollReveal animation="fade-up" delay={400}>
+        <FeatureCard 
+          icon={iconStrings.chartNoAxesCombined}
+          title="Historial y tendencias"
+          description="Seguimiento de la productividad de cada potrero a través del tiempo para decisiones a largo plazo."
+          accentColor="green"
+        />
+      </ScrollReveal>
+      
+      <ScrollReveal animation="fade-up" delay={500}>
+        <FeatureCard 
+          icon="📄"
+          title="Reportes descargables"
+          description="PDFs con análisis completos para compartir con tu equipo o asesores técnicos."
+          accentColor="green"
+        />
+      </ScrollReveal>
+    </div>
+    
+    <!-- Process timeline -->
+    <ScrollReveal animation="fade-in">
+      <div class="glass rounded-2xl p-8 mt-12">
+        <h3 class="font-heading text-xl font-semibold text-text-primary text-center mb-8">
+          El proceso completo
+        </h3>
+        <div class="grid md:grid-cols-5 gap-4 text-center">
+          <div class="p-4">
+            <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-gg-green-dark/20 flex items-center justify-center text-xl">1</div>
+            <p class="text-sm text-text-secondary">Registro de potreros</p>
+          </div>
+          <div class="p-4">
+            <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-gg-green-dark/20 flex items-center justify-center text-xl">2</div>
+            <p class="text-sm text-text-secondary">Captura aérea</p>
+          </div>
+          <div class="p-4">
+            <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-gg-green-dark/20 flex items-center justify-center text-xl">3</div>
+            <p class="text-sm text-text-secondary">Análisis de ML</p>
+          </div>
+          <div class="p-4">
+            <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-gg-green-dark/20 flex items-center justify-center text-xl">4</div>
+            <p class="text-sm text-text-secondary">Plan generado</p>
+          </div>
+          <div class="p-4">
+            <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-gg-green-dark/20 flex items-center justify-center text-xl">5</div>
+            <p class="text-sm text-text-secondary">Ejecución + seguimiento</p>
+          </div>
+        </div>
+      </div>
+    </ScrollReveal>
+    
+    <ScrollReveal animation="fade-up">
+      <div class="text-center mt-12">
+        <Button 
+          text="Prueba Grass Gauge en tu campo" 
+          href="/contacto" 
+          variant="primary" 
+          color="green" 
+          size="lg"
+        />
+      </div>
+    </ScrollReveal>
+  </div>
+</section>

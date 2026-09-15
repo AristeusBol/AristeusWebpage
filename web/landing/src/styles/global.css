@@ -1,0 +1,143 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Brand core */
+  --aristeus-navy: #0B2341;
+  --aristeus-green: #6BA539;
+  --aristeus-secondary: #355E3B;
+  --technical-graphite: #2B2F36;
+  --mineral-white: #F5F7F4;
+  --mist-gray: #D8DEE3;
+
+  /* Semantic palette */
+  --bg-primary: var(--mineral-white);
+  --bg-secondary: var(--mist-gray);
+  --bg-card: #FFFFFF;
+  --text-primary: var(--technical-graphite);
+  --text-secondary: var(--aristeus-secondary);
+  --text-inverse: var(--mineral-white);
+  --border-subtle: var(--mist-gray);
+  --heading: var(--aristeus-navy);
+  --link: var(--aristeus-navy);
+  --link-hover: var(--aristeus-secondary);
+  --button-primary-bg: var(--aristeus-navy);
+  --button-primary-text: var(--mineral-white);
+  --button-secondary-bg: var(--aristeus-green);
+  --button-secondary-text: var(--mineral-white);
+
+  /* Product palette constrained to brand system */
+  --gg-green-dark: var(--aristeus-secondary);
+  --gg-green-mid: var(--aristeus-green);
+  --gg-green-light: var(--aristeus-green);
+  --gg-gradient: linear-gradient(135deg, var(--aristeus-secondary), var(--aristeus-green));
+  --cv-charcoal: var(--technical-graphite);
+  --cv-gold: #B8963E;
+  --cv-dark: var(--aristeus-navy);
+  --cv-gradient: linear-gradient(135deg, var(--technical-graphite), #B8963E);
+
+  /* Typography */
+  --font-heading: 'Space Grotesk', sans-serif;
+  --font-body: 'IBM Plex Sans', sans-serif;
+  --font-data: 'JetBrains Mono', monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Selection color */
+::selection {
+  background-color: var(--aristeus-green);
+  color: var(--text-inverse);
+}
+
+/* Scrollbar customization */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-subtle) var(--bg-secondary);
+}
+
+/* Glassmorphism utility */
+.glass {
+  background: rgba(245, 247, 244, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 18px 40px rgba(11, 35, 65, 0.08);
+}
+
+/* Gradient borders */
+.border-gg-gradient {
+  border-left: 3px solid transparent;
+  border-image: var(--gg-gradient) 1;
+}
+
+.border-cv-gradient {
+  border-left: 3px solid transparent;
+  border-image: var(--cv-gradient) 1;
+}
+
+/* Hover glow utilities */
+.hover-glow-green:hover {
+  box-shadow: 0 0 20px rgba(107, 165, 57, 0.28);
+}
+
+.hover-glow-gold:hover {
+  box-shadow: 0 0 20px rgba(184, 150, 62, 0.35);
+}
+
+a {
+  color: var(--link);
+}
+
+a:hover {
+  color: var(--link-hover);
+}
+
+/* Transition utilities */
+.transition-smooth {
+  transition: all 300ms ease;
+}
+
+/* Hide scrollbar but keep functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

@@ -1,0 +1,12 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import RegisterForm from '../components/auth/RegisterForm.tsx';
+---
+
+<BaseLayout title="Registrarse" description="Creá tu cuenta en Aristeus">
+  <section class="py-20 md:py-32 bg-bg-primary min-h-[80vh] flex items-center">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+      <RegisterForm client:only="react" />
+    </div>
+  </section>
+</BaseLayout>

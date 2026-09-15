@@ -1,0 +1,77 @@
+---
+import SectionTitle from '../shared/SectionTitle.astro';
+import ScrollReveal from '../animations/ScrollReveal.astro';
+import Icon from '../icons/Icon';
+---
+
+<section class="py-20 md:py-32 bg-bg-secondary" id="problema">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <ScrollReveal>
+      <SectionTitle 
+        title="El sobrepastoreo está destruyendo las tierras ganaderas de Bolivia"
+        align="center"
+        class="mb-16"
+      />
+    </ScrollReveal>
+    
+    <div class="grid lg:grid-cols-2 gap-12 items-center">
+      <!-- Left: Image with stat overlay -->
+      <ScrollReveal animation="slide-right">
+        <div class="relative rounded-2xl overflow-hidden aspect-[4/3]">
+          <img 
+            src="https://images.unsplash.com/photo-1618477388954-7852f32655ec?w=800&q=80" 
+            alt="Degraded land"
+            class="w-full h-full object-cover"
+          />
+          <div class="absolute inset-0 bg-gradient-to-t from-bg-primary/96 via-bg-primary/66 to-transparent"></div>
+          <div class="absolute bottom-0 left-0 right-0 p-8">
+            <div class="font-data text-6xl md:text-7xl font-bold text-aristeus-green">70%</div>
+            <p class="text-aristeus-secondary text-lg mt-2">de las tierras ganaderas sufren degradación</p>
+          </div>
+        </div>
+      </ScrollReveal>
+      
+      <!-- Right: Pain points -->
+      <ScrollReveal animation="slide-left" delay={200}>
+        <div class="space-y-6">
+          <div class="flex items-start gap-4 p-6 glass rounded-xl border-l-4 border-aristeus-navy">
+            <div class="text-2xl"><Icon name="trendingDown" class="w-6 h-6" client:only="react" /></div>
+            <div>
+              <h3 class="font-heading font-semibold text-text-primary text-lg mb-1">
+                Pérdida de $155 USD/ha/año
+              </h3>
+              <p class="text-text-secondary">por sobrepastoreo y manejo ineficiente</p>
+            </div>
+          </div>
+          
+          <div class="flex items-start gap-4 p-6 glass rounded-xl border-l-4 border-aristeus-secondary">
+            <div class="text-2xl"><Icon name="chartColumn" class="w-6 h-6" client:only="react" /></div>
+            <div>
+              <h3 class="font-heading font-semibold text-text-primary text-lg mb-1">
+                Reducción de capacidad de carga
+              </h3>
+              <p class="text-text-secondary">año tras año sin intervención</p>
+            </div>
+          </div>
+          
+          <div class="flex items-start gap-4 p-6 glass rounded-xl border-l-4 border-aristeus-green">
+            <div class="text-2xl"><Icon name="goal" class="w-6 h-6" client:only="react" /></div>
+            <div>
+              <h3 class="font-heading font-semibold text-text-primary text-lg mb-1">
+                Decisiones basadas en intuición
+              </h3>
+              <p class="text-text-secondary">sin datos precisos del pasto disponible</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Bridge question -->
+        <div class="mt-8 p-6 rounded-xl bg-white/70 border border-aristeus-secondary/20 shadow-[0_16px_34px_rgba(11,35,65,0.06)]">
+          <p class="font-heading text-xl text-aristeus-navy italic">
+            "¿Y si pudieras ver exactamente cuánto pasto tiene cada potrero antes de decidir?"
+          </p>
+        </div>
+      </ScrollReveal>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,50 @@
+services:
+  db:
+    image: postgis/postgis:15-3.4
+    container_name: grassgauge_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin_grassgauge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password_local_123}
+      POSTGRES_DB: ${POSTGRES_DB:-grassgauge}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+      - ./init_db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin_grassgauge} -d ${POSTGRES_DB:-grassgauge}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../grassgauge-api
+      dockerfile: Dockerfile
+    container_name: grassgauge_api
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin_grassgauge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password_local_123}
+      POSTGRES_DB: ${POSTGRES_DB:-grassgauge}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      ENV: ${ENV:-dev}
+      SECRET_KEY: ${SECRET_KEY:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/app/uploads
+    restart: unless-stopped
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
+
+volumes:
+  # Nombres explícitos: estables ante renombres del proyecto compose.
+  postgis_data:
+    name: grassgauge_postgis_data
+  uploads_data:
+    name: grassgauge_uploads_data

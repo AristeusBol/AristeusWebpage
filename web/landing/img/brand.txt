@@ -1,0 +1,77 @@
+BRAND_COLOR_SYSTEM
+brand_name: ARISTEUS
+
+palette:
+  primary:
+    deep_scientific_blue:
+      hex: "#0B2341"
+      role: "Color principal corporativo"
+      usage: ["header", "botones principales", "títulos destacados", "fondos oscuros"]
+    agro_tech_green:
+      hex: "#6BA539"
+      role: "Color primario de acento"
+      usage: ["CTA", "badges", "hover states", "elementos de énfasis"]
+
+  secondary:
+    organic_dark_green:
+      hex: "#355E3B"
+      role: "Color secundario"
+      usage: ["subtítulos", "íconos", "secciones temáticas", "gráficos secundarios"]
+
+  neutrals:
+    technical_graphite:
+      hex: "#2B2F36"
+      role: "Neutral oscuro"
+      usage: ["texto principal", "fondos neutros oscuros", "UI corporativa"]
+    mineral_white:
+      hex: "#F5F7F4"
+      role: "Neutral claro"
+      usage: ["background principal", "cards", "zonas limpias", "superficies"]
+    mist_gray:
+      hex: "#D8DEE3"
+      role: "Color de soporte"
+      usage: ["bordes", "divisores", "fondos suaves", "tablas", "inputs"]
+
+replacement_rules:
+  - "Usar #0B2341 como color principal de marca."
+  - "Usar #6BA539 para acciones importantes y acentos visuales."
+  - "Usar #355E3B como color secundario natural/científico."
+  - "Usar #2B2F36 para texto principal o fondos oscuros neutros."
+  - "Usar #F5F7F4 como fondo base claro."
+  - "Usar #D8DEE3 para bordes, líneas y superficies suaves."
+  - "No introducir colores nuevos salvo variantes de opacidad o estados hover."
+  - "Mantener contraste alto entre texto y fondo."
+  - "Preferir estética científica, limpia, corporativa y agro-tecnológica."
+
+semantic_mapping:
+  background: "#F5F7F4"
+  background_alt: "#D8DEE3"
+  text_primary: "#2B2F36"
+  text_inverse: "#F5F7F4"
+  heading: "#0B2341"
+  link: "#0B2341"
+  link_hover: "#355E3B"
+  button_primary_bg: "#0B2341"
+  button_primary_text: "#F5F7F4"
+  button_secondary_bg: "#6BA539"
+  button_secondary_text: "#F5F7F4"
+  border: "#D8DEE3"
+  accent: "#6BA539"
+  accent_dark: "#355E3B"
+
+design_intent:
+  style_keywords:
+    - "científico"
+    - "agro moderno"
+    - "corporativo"
+    - "preciso"
+    - "limpio"
+    - "tecnológico"
+    - "sobrio"
+
+instruction_for_ai:
+  - "Reemplaza la paleta actual del sitio por esta paleta de marca."
+  - "Respeta la jerarquía visual existente."
+  - "No cambies layout, espaciado ni contenido; solo colores."
+  - "Si hay variables CSS existentes, reasígnalas a estos valores semánticos."
+  - "Si hay colores inline, sustitúyelos por los equivalentes de esta paleta."

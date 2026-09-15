@@ -1,0 +1,66 @@
+---
+interface Props {
+  number: string;
+  label: string;
+  prefix?: string;
+  suffix?: string;
+  class?: string;
+}
+
+const { number, label, prefix = '', suffix = '', class: className = '' } = Astro.props;
+---
+
+<div class={`glass p-6 rounded-xl text-center transition-smooth hover:shadow-[0_0_20px_rgba(107,165,57,0.26)] hover:border-aristeus-green group ${className}`}>
+  <div class="font-data text-4xl md:text-5xl lg:text-6xl font-semibold text-aristeus-green mb-2">
+    <span class="text-text-secondary text-2xl md:text-3xl">{prefix}</span>
+    <span data-counter>{number}</span>
+    <span class="text-text-secondary text-2xl md:text-3xl">{suffix}</span>
+  </div>
+  <p class="text-text-secondary text-sm md:text-base">
+    {label}
+  </p>
+</div>
+
+<script>
+  function animateCounter(el: HTMLElement) {
+    const target = el.textContent || '';
+    const num = parseFloat(target.replace(/[^0-9.-]/g, ''));
+    if (isNaN(num)) return;
+    
+    const prefix = target.match(/^[^0-9]*/)?.[0] || '';
+    const suffix = target.match(/[^0-9]*$/)?.[0] || '';
+    const isFloat = target.includes('.');
+    const duration = 1500;
+    const start = 0;
+    const startTime = performance.now();
+    
+    function update(currentTime: number) {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      const current = start + (num - start) * easeOut;
+      
+      el.textContent = prefix + (isFloat ? current.toFixed(1) : Math.round(current)) + suffix;
+      
+      if (progress < 1) {
+        requestAnimationFrame(update);
+      }
+    }
+    
+    requestAnimationFrame(update);
+  }
+  
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const counter = entry.target.querySelector('[data-counter]') as HTMLElement;
+        if (counter) animateCounter(counter);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.5 });
+  
+  document.querySelectorAll('[data-counter]').forEach(el => {
+    observer.observe(el.closest('.glass') || el);
+  });
+</script>
