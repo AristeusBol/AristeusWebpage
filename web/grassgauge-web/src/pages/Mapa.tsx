@@ -414,8 +414,8 @@ export default function Mapa() {
             {error && <p className="error-text">{error}</p>}
             {fincas.length === 0 && !loading && (
               <p className="muted">
-                Sin estancias: todavía no hay <code>calculos_stock</code>. Cargá CSVs y corré{' '}
-                <code>calcular_kilos_reales.py --guardar</code>.
+                Sin estancias: todavía no hay potreros cargados. Subí potreros y mapa
+                desde el loader (el stock se calcula solo al subir el mapa).
               </p>
             )}
 

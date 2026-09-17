@@ -33,15 +33,23 @@ def _semaforo(ocupada: bool, tiene_calculo: bool, dias: Optional[float]) -> str:
 
 
 def _ultima_fecha(conn, uid: int, finca: str):
-    """Fecha más reciente con datos de forraje para la estancia
-    (unión de calculos_stock y mapa_color)."""
+    """Fecha más reciente con datos de forraje para la estancia.
+
+    Prefiere calculos_stock (oferta cerrada); fallback a mapa_color
+    (puntos sin calcular) para fincas recién cargadas."""
     row = conn.execute(
         text("""
-            SELECT MAX(fecha) FROM (
-                SELECT fecha FROM calculos_stock WHERE usuario_id = :uid AND finca = :finca
-                UNION
-                SELECT fecha FROM mapa_color WHERE usuario_id = :uid AND finca = :finca
-            ) AS f
+            SELECT MAX(fecha) FROM calculos_stock
+            WHERE usuario_id = :uid AND finca = :finca
+        """),
+        {"uid": uid, "finca": finca},
+    ).fetchone()
+    if row and row[0]:
+        return row[0]
+    row = conn.execute(
+        text("""
+            SELECT MAX(fecha) FROM mapa_color
+            WHERE usuario_id = :uid AND finca = :finca
         """),
         {"uid": uid, "finca": finca},
     ).fetchone()

@@ -44,7 +44,7 @@ export default function MapaPunto({ features, punto, onPunto }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   const cbRef = useRef(onPunto);
-  cbRef.current = onPunto;
+  useEffect(() => { cbRef.current = onPunto; });
 
   useEffect(() => {
     if (!ref.current || mapRef.current) return;

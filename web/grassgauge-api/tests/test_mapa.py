@@ -51,8 +51,8 @@ def test_mapa_tile_recorta_exclusiones():
     assert "ST_Covers" in sql
 
 
-def test_mapa_histograma_geojson_excluyen_exclusion():
-    """Histograma y GeoJSON no deben contar puntos dentro de exclusiones."""
+def test_mapa_histograma_excluye_exclusion():
+    """Histograma no debe contar puntos dentro de exclusiones."""
     from tests.test_histograma import _mock_hist_engine
     eng, conn = _mock_hist_engine([10.0, 20.0], dueno=None)
     with patch("api.routers.mapa.engine", eng):
@@ -62,15 +62,6 @@ def test_mapa_histograma_geojson_excluyen_exclusion():
         if "mapa_color" in sql:
             assert "zonas_exclusion" in sql
             assert "NOT EXISTS" in sql
-    mock_conn = MagicMock()
-    mock_engine = MagicMock()
-    mock_engine.connect.return_value.__enter__.return_value = mock_conn
-    mock_conn.execute.return_value.fetchall.return_value = []
-    with patch("api.routers.mapa.engine", mock_engine):
-        client.get("/api/mapa/geojson?finca=F&fecha=2024-04-01&tipo_densidad=verde", headers=auth_headers(1))
-    sql = str(mock_conn.execute.call_args[0][0])
-    assert "zonas_exclusion" in sql
-    assert "NOT EXISTS" in sql
 
 
 def test_mapa_tile_tipos_densidad_whitelist():
@@ -125,57 +116,3 @@ def test_mapa_tile_sqli_protegido():
     assert "DROP TABLE" not in sql
     assert conn.execute.call_args[0][1]["finca"] == "F'; DROP TABLE--"
 
-
-def test_mapa_geojson_ok():
-    mock_conn = MagicMock()
-    mock_engine = MagicMock()
-    mock_engine.connect.return_value.__enter__.return_value = mock_conn
-    mock_conn.execute.return_value.fetchall.return_value = [
-        MagicMock(id=1, geom_json={"type": "Point", "coordinates": [-60, -30]}, valor=123.5),
-        MagicMock(id=2, geom_json={"type": "Point", "coordinates": [-60.1, -30.1]}, valor=200),
-    ]
-    with patch("api.routers.mapa.engine", mock_engine):
-        resp = client.get("/api/mapa/geojson?finca=La%20Esperanza&fecha=2024-04-01&tipo_densidad=muerta", headers=auth_headers(1))
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["type"] == "FeatureCollection"
-    assert len(data["features"]) == 2
-    assert data["features"][0]["properties"]["valor"] == 123.5
-    assert data["metadata"]["finca"] == "La Esperanza"
-    assert data["metadata"]["tipo_densidad"] == "muerta"
-    sql = str(mock_conn.execute.call_args[0][0])
-    assert "ST_AsGeoJSON" in sql
-    assert "densidad_muerta_g_m2" in sql
-
-
-def test_mapa_geojson_limit_warning():
-    mock_conn = MagicMock()
-    mock_engine = MagicMock()
-    mock_engine.connect.return_value.__enter__.return_value = mock_conn
-    rows = [MagicMock(id=i, geom_json={"type": "Point", "coordinates": [0,0]}, valor=10) for i in range(5)]
-    mock_conn.execute.return_value.fetchall.return_value = rows
-    with patch("api.routers.mapa.engine", mock_engine):
-        resp = client.get("/api/mapa/geojson?finca=F&fecha=2024-04-01&tipo_densidad=verde&limit=5", headers=auth_headers(1))
-    assert resp.json()["metadata"]["warning"] is not None
-    assert "preferir /tiles" in resp.json()["metadata"]["warning"]
-
-
-def test_mapa_geojson_tipo_invalido():
-    resp = client.get("/api/mapa/geojson?finca=F&fecha=2024-04-01&tipo_densidad=azul", headers=auth_headers(1))
-    assert resp.status_code == 400
-
-
-def test_mapa_geojson_solo_una_columna():
-    """Verifica que solo se selecciona la columna pedida, no las 3, para reducir payload"""
-    for tipo, col in [("verde","densidad_verde_g_m2"),("muerta","densidad_muerta_g_m2"),("total","densidad_total_g_m2")]:
-        mock_conn = MagicMock()
-        mock_engine = MagicMock()
-        mock_engine.connect.return_value.__enter__.return_value = mock_conn
-        mock_conn.execute.return_value.fetchall.return_value = []
-        with patch("api.routers.mapa.engine", mock_engine):
-            client.get(f"/api/mapa/geojson?finca=F&fecha=2024-04-01&tipo_densidad={tipo}", headers=auth_headers(1))
-        sql = str(mock_conn.execute.call_args[0][0])
-        assert col in sql
-        otras = [c for c in ["densidad_verde_g_m2","densidad_muerta_g_m2","densidad_total_g_m2"] if c != col]
-        for o in otras:
-            assert o not in sql

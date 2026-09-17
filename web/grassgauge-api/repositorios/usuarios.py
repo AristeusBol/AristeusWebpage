@@ -11,6 +11,6 @@ def insertar_usuario(conn, nombre, email, password_hash):
 
 def obtener_por_email(conn, email):
     consulta = text(
-        "SELECT id, nombre, password_hash FROM usuarios WHERE email = :e"
+        "SELECT id, nombre, password_hash FROM usuarios WHERE lower(email) = lower(:e)"
     )
     return conn.execute(consulta, {"e": email}).fetchone()

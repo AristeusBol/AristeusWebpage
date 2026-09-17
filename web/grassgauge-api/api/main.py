@@ -44,7 +44,7 @@ if UPLOAD_DIR.exists():
 @app.get("/", tags=["health"])
 def health():
     """Estado del servicio."""
-    return {"status": "ok", "service": "grassgauge-auth", "version": "1.0.0"}
+    return {"status": "ok", "service": "grassgauge-api", "version": "1.0.0"}
 
 
 @app.get("/health", tags=["health"])

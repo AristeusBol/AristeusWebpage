@@ -1,7 +1,5 @@
 import datetime
 from unittest.mock import MagicMock, patch
-
-import pytest
 from fastapi.testclient import TestClient
 from jose import jwt
 
@@ -12,13 +10,14 @@ from core.config import ALGORITHM, SECRET_KEY
 client = TestClient(app)
 
 
-def _mock_engine(fincas_rows, fechas_rows):
+def _mock_engine(fincas_rows, fechas_rows, fallback_rows=None):
     mock_conn = MagicMock()
     mock_engine = MagicMock()
     mock_engine.connect.return_value.__enter__.return_value = mock_conn
     mock_conn.execute.side_effect = [
         MagicMock(fetchall=lambda: fincas_rows),
         MagicMock(fetchall=lambda: fechas_rows),
+        MagicMock(fetchall=lambda: fallback_rows or []),
     ]
     return mock_engine, mock_conn
 
@@ -58,16 +57,37 @@ def test_filtros_con_finca_cascada():
     assert params["uid"] == 1
 
 
-def test_filtros_solo_calculos_stock_no_geometrias():
-    """Garantiza que no se toca mapa_color/potreros_base para fechas"""
+def test_filtros_sin_geometrias():
+    """Fincas salen de potreros_base y el fallback de fechas de mapa_color;
+    nunca se selecciona la columna geom (solo finca/fecha)."""
     eng, conn = _mock_engine([], [])
     with patch("api.routers.filtros.engine", eng):
         client.get("/api/mapa/filtros", headers=auth_headers(99))
+    assert conn.execute.call_count >= 2
     for call in conn.execute.call_args_list:
         sql = str(call[0][0]).lower()
-        assert "mapa_color" not in sql
-        assert "potreros_base" not in sql
         assert "geom" not in sql
+
+
+def test_filtros_fincas_desde_potreros_sin_calculos():
+    """Usuario con potreros pero sin cálculos igual ve su finca."""
+    mock_conn = MagicMock()
+    mock_engine = MagicMock()
+    mock_engine.connect.return_value.__enter__.return_value = mock_conn
+    mock_conn.execute.side_effect = [
+        MagicMock(fetchall=lambda: [("Finca Nueva",)]),
+        MagicMock(fetchall=lambda: []),
+        MagicMock(fetchall=lambda: [(datetime.date(2024, 5, 1),)]),
+    ]
+    with patch("api.routers.filtros.engine", mock_engine):
+        resp = client.get("/api/mapa/filtros", headers=auth_headers(1))
+    assert resp.status_code == 200
+    assert resp.json()["fincas"] == ["Finca Nueva"]
+    assert resp.json()["fechas"] == ["2024-05-01"]
+    sql_fincas = str(mock_conn.execute.call_args_list[0][0][0])
+    assert "potreros_base" in sql_fincas
+    sql_fallback = str(mock_conn.execute.call_args_list[2][0][0])
+    assert "mapa_color" in sql_fallback
 
 
 def test_filtros_con_jwt():

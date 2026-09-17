@@ -243,3 +243,30 @@ def test_balance_sin_fecha_usa_la_ultima():
     data = resp.json()
     assert data["fecha"] == "2026-08-31"
     assert data["parcelas"][0]["masa_total_kg"] == 8000.0
+
+def test_ultima_fecha_prefiere_calculos():
+    from api.routers.balance import _ultima_fecha
+
+    conn = MagicMock()
+    conn.execute.return_value.fetchone.return_value = (date(2026, 8, 31),)
+    assert _ultima_fecha(conn, 1, "F") == date(2026, 8, 31)
+    assert conn.execute.call_count == 1  # no llega a mapa_color
+    assert "calculos_stock" in str(conn.execute.call_args[0][0])
+
+
+def test_ultima_fecha_fallback_mapa():
+    from api.routers.balance import _ultima_fecha
+
+    conn = MagicMock()
+    conn.execute.return_value.fetchone.side_effect = [(None,), (date(2026, 7, 1),)]
+    assert _ultima_fecha(conn, 1, "F") == date(2026, 7, 1)
+    assert conn.execute.call_count == 2
+    assert "mapa_color" in str(conn.execute.call_args_list[1][0][0])
+
+
+def test_ultima_fecha_sin_datos_none():
+    from api.routers.balance import _ultima_fecha
+
+    conn = MagicMock()
+    conn.execute.return_value.fetchone.side_effect = [(None,), (None,)]
+    assert _ultima_fecha(conn, 1, "F") is None

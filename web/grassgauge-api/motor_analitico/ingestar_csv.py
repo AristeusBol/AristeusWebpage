@@ -1,5 +1,6 @@
 import argparse
 import sys
+from datetime import date
 
 import geopandas as gpd
 import pandas as pd
@@ -8,6 +9,8 @@ from sqlalchemy import text
 
 from core.config import DATOS_DIR
 from core.db import engine
+from motor_analitico.negocio import calcular_stock_potrero
+from repositorios import calculos
 
 TABLAS_PERMITIDAS = {"mapa_color", "potreros_base", "zonas_exclusion"}
 
@@ -275,6 +278,60 @@ def _leer_csv(ruta, encoding):
         return None
 
 
+def _grupos_mapa(gdf):
+    """Grupos (usuario_id, potrero_id, fecha) presentes en el lote ingerido."""
+    grupos = []
+    for (uid, pid, fecha), _sub in gdf.groupby(["usuario_id", "potrero_id", "fecha"]):
+        try:
+            uid_int, pid_int = int(str(uid).strip()), int(str(pid).strip())
+        except (ValueError, TypeError):
+            continue
+        if isinstance(fecha, date):
+            f = fecha
+        else:
+            try:
+                f = date.fromisoformat(str(fecha).strip())
+            except ValueError:
+                continue
+        grupos.append((uid_int, pid_int, f))
+    return grupos
+
+
+def _calcular_grupos(gdf):
+    """Calcula y guarda el stock de cada grupo del lote (best-effort).
+
+    Retorna (ok, fallos): cantidad de grupos guardados y lista de
+    (uid, pid, fecha, motivo) para los que no se pudo calcular.
+    """
+    ok, fallos = 0, []
+    for uid, pid, fecha in _grupos_mapa(gdf):
+        try:
+            res = calcular_stock_potrero(engine, pid, uid, fecha=fecha)
+        except Exception as e:
+            fallos.append((uid, pid, fecha.isoformat(), str(e)))
+            continue
+        if res is None:
+            fallos.append((uid, pid, fecha.isoformat(), "sin puntos válidos"))
+            continue
+        try:
+            with engine.begin() as conn:
+                calculos.upsert_calculo(
+                    conn,
+                    pid,
+                    res["finca"],
+                    res["fecha"],
+                    res["area_neta_ha"],
+                    res["masa_total_potrero_verde_kg"],
+                    res["masa_total_potrero_muerta_kg"],
+                    res["masa_total_potrero_total_kg"],
+                    usuario_id=res.get("usuario_id", uid),
+                )
+            ok += 1
+        except Exception as e:
+            fallos.append((uid, pid, fecha.isoformat(), f"error guardando: {e}"))
+    return ok, fallos
+
+
 def principal():
     parser = argparse.ArgumentParser(description="Ingesta simple: sube CSV solo si está completo y columnas coinciden")
     parser.add_argument(
@@ -289,6 +346,11 @@ def principal():
         type=str,
         default=None,
         help="Fuerza la codificación del CSV (por defecto: UTF-8)",
+    )
+    parser.add_argument(
+        "--sin-calcular",
+        action="store_true",
+        help="Solo para mapa_color: no calcula ni guarda el stock tras ingerir",
     )
 
     args = parser.parse_args()
@@ -423,6 +485,19 @@ def principal():
     except Exception as e:
         print(f"[X] La base de datos rechazó los datos. Verificá tipos y restricciones:\n{e}")
         return 1
+
+    # Potreros y exclusiones son fijos: nada que calcular. El mapa dispara
+    # el cálculo+guardado de cada grupo (usuario, potrero, fecha) ingerido.
+    if args.tabla == "mapa_color" and not args.sin_calcular:
+        print("[*] Calculando stock de los grupos ingeridos...")
+        ok, fallos = _calcular_grupos(gdf)
+        for uid, pid, fecha, motivo in fallos:
+            print(f"[X] Sin cálculo potrero {pid} (usuario {uid}, fecha {fecha}): {motivo}")
+        if fallos:
+            print(f"[!] Ingesta OK, cálculos {ok} OK / {len(fallos)} con fallo. "
+                  "Revisá y re-corré calcular_kilos_reales.py para esos grupos.")
+            return 1
+        print(f"[+] Stock calculado y guardado para {ok} grupo(s).")
 
     return 0
 

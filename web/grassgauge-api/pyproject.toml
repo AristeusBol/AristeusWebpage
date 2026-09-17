@@ -22,5 +22,8 @@ dependencies = [
     "python-multipart",
 ]
 
+[project.optional-dependencies]
+test = ["pytest", "httpx"]
+
 [tool.setuptools.packages.find]
 include = ["api*", "core*", "repositorios*", "motor_analitico*"]

@@ -9,7 +9,6 @@ from sqlalchemy.exc import IntegrityError
 from api.schemas import PotreroCreate, PotreroUpdate
 from core.db import engine
 from core.seguridad import get_current_user_id
-from repositorios import parcelas as repo_parcelas
 
 router = APIRouter(prefix="/api/potreros", tags=["potreros"])
 
@@ -158,6 +157,20 @@ def crear_potrero(
 ):
     """Crea un potrero dibujado desde la interfaz. Devuelve {id, area_ha}."""
     gj = json.dumps(body.geom)
+    # Validar la candidata ANTES de persistir: evita insertar para luego
+    # borrar si la geometría es inválida o muy chica.
+    with engine.connect() as conn:
+        chk_prev = conn.execute(
+            text("""
+                SELECT ST_IsValid(ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326)) AS valida,
+                       ST_Area(ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326)::geography)/10000.0 AS area_ha
+            """),
+            {"gj": gj},
+        ).fetchone()
+    if not chk_prev.valida:
+        raise HTTPException(status_code=400, detail="Geometría inválida (autointersección). Redibujá el polígono.")
+    if float(chk_prev.area_ha or 0) < 0.01:
+        raise HTTPException(status_code=400, detail="Área mínima 0.01 ha. Dibujá un polígono más grande.")
     try:
         with engine.begin() as conn:
             row = conn.execute(
@@ -174,33 +187,9 @@ def crear_potrero(
             status_code=409,
             detail=f"Ya existe un potrero '{body.nombre}' en '{body.finca}'",
         )
-    # Validación PostGIS: geometría válida y área mínima 0.01 ha
-    with engine.connect() as conn:
-        chk = conn.execute(
-            text("""
-                SELECT ST_IsValid(geom) AS valida,
-                       ST_Area(geom::geography) / 10000.0 AS area_ha
-                FROM potreros_base WHERE id = :id AND usuario_id = :uid
-            """),
-            {"id": row.id, "uid": uid},
-        ).fetchone()
-    if not chk.valida:
-        with engine.begin() as conn:
-            conn.execute(
-                text("DELETE FROM potreros_base WHERE id=:id AND usuario_id=:uid"),
-                {"id": row.id, "uid": uid},
-            )
-        raise HTTPException(status_code=400, detail="Geometría inválida (autointersección). Redibujá el polígono.")
-    if float(chk.area_ha) < 0.01:
-        with engine.begin() as conn:
-            conn.execute(
-                text("DELETE FROM potreros_base WHERE id=:id AND usuario_id=:uid"),
-                {"id": row.id, "uid": uid},
-            )
-        raise HTTPException(status_code=400, detail="Área mínima 0.01 ha. Dibujá un polígono más grande.")
     return {
         "id": row.id, "nombre": body.nombre, "finca": body.finca,
-        "area_ha": float(chk.area_ha),
+        "area_ha": float(row.area_ha),
     }
 
 
@@ -210,7 +199,7 @@ def actualizar_potrero(
     body: PotreroUpdate,
     uid: int = Depends(get_current_user_id),
 ):
-    """Renombra / cambia finca / redibuja geometría de un potrero propio."""
+    """Renombra / redibuja la geometría de un potrero propio."""
     with engine.connect() as conn:
         existe = conn.execute(
             text("SELECT id FROM potreros_base WHERE id=:pid AND usuario_id=:uid"),
@@ -223,9 +212,6 @@ def actualizar_potrero(
     if body.nombre is not None:
         sets.append("nombre = :nombre")
         params["nombre"] = body.nombre
-    if body.finca is not None:
-        sets.append("finca = :finca")
-        params["finca"] = body.finca
     if body.geom is not None:
         sets.append("geom = ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326)")
         params["gj"] = json.dumps(body.geom)
@@ -324,92 +310,4 @@ def eliminar_potrero(
         "calculos_eliminados": int(row.n_calc or 0),
         "fotos_eliminadas": int(row.n_fotos or 0),
         "archivos_borrados": fotos_borradas,
-    }
-
-
-@router.get("/{potrero_id}/detalle")
-def detalle_potrero_gestion(
-    potrero_id: int,
-    fecha: Optional[date] = Query(None, description="Fecha YYYY-MM-DD para prorrateo forrajero"),
-    uid: int = Depends(get_current_user_id),
-):
-    """Detalle para Gestión: potrero + parcelas (con prorrateo*) + exclusiones.
-
-    El prorrateo estima cada parcela como `t/ha del potrero × área parcela`.
-    """
-    with engine.connect() as conn:
-        pot = conn.execute(
-            text("""
-                SELECT p.id, p.nombre, p.finca,
-                       ST_AsGeoJSON(p.geom)::json AS geom_json,
-                       ST_Area(p.geom::geography)/10000.0 AS area_bruta_ha,
-                       c.area_neta_ha, c.masa_seca_verde, c.masa_seca_muerta, c.masa_seca_total
-                FROM potreros_base p
-                LEFT JOIN calculos_stock c ON c.potrero_id=p.id AND c.usuario_id=p.usuario_id
-                       AND c.fecha=:fecha
-                WHERE p.id=:pid AND p.usuario_id=:uid
-            """),
-            {"pid": potrero_id, "uid": uid, "fecha": fecha},
-        ).fetchone()
-        if not pot:
-            raise HTTPException(status_code=404, detail=f"Potrero {potrero_id} no existe o no es tuyo")
-        calc = None
-        if fecha is not None:
-            calc = repo_parcelas.calculo_potrero(conn, potrero_id, uid, fecha.isoformat())
-        parcelas = repo_parcelas.listar_parcelas_potrero(conn, potrero_id, uid)
-        exclusiones = conn.execute(
-            text("""
-                SELECT id, nombre, tipo, ST_AsGeoJSON(geom)::json AS geom_json,
-                       ST_Area(geom::geography)/10000.0 AS area_ha
-                FROM zonas_exclusion WHERE potrero_id=:pid AND usuario_id=:uid
-            """),
-            {"pid": potrero_id, "uid": uid},
-        ).fetchall()
-
-    area_neta = float(pot.area_neta_ha) if pot.area_neta_ha is not None else None
-    verde = float(pot.masa_seca_verde) if pot.masa_seca_verde is not None else None
-    muerta = float(pot.masa_seca_muerta) if pot.masa_seca_muerta is not None else None
-    total = float(pot.masa_seca_total) if pot.masa_seca_total is not None else None
-
-    feats = [{
-        "type": "Feature", "geometry": pot.geom_json,
-        "properties": {
-            "id": pot.id, "tipo": "potrero_base", "nombre": pot.nombre, "finca": pot.finca,
-            "fecha": fecha.isoformat() if fecha else None,
-            "area_bruta_ha": float(pot.area_bruta_ha) if pot.area_bruta_ha is not None else None,
-            "area_neta_ha": area_neta, "masa_verde_kg": verde, "masa_muerta_kg": muerta,
-            "masa_total_kg": total, "t_ha_verde": _t_ha(verde, area_neta),
-            "t_ha_muerta": _t_ha(muerta, area_neta), "t_ha_total": _t_ha(total, area_neta),
-            "tiene_calculo": total is not None, "estimado_por_prorrateo": False,
-        },
-    }]
-    for pa in parcelas:
-        area_pa = float(pa.area_ha) if pa.area_ha is not None else None
-        pr = _prorrateo(area_pa, calc)
-        feats.append({
-            "type": "Feature", "geometry": pa.geom_json,
-            "properties": {
-                "id": pa.id, "tipo": "parcela", "nombre": pa.nombre, "finca": pot.finca,
-                "potrero_id": pa.potrero_id, "estado": pa.estado,
-                "fecha": fecha.isoformat() if fecha else None,
-                "area_ha": area_pa, **pr,
-            },
-        })
-    for ex in exclusiones:
-        feats.append({
-            "type": "Feature", "geometry": ex.geom_json,
-            "properties": {
-                "id": ex.id, "tipo": "exclusion", "nombre": ex.nombre,
-                "subtipo": ex.tipo, "finca": pot.finca,
-                "area_ha": float(ex.area_ha) if ex.area_ha is not None else None,
-            },
-        })
-    return {
-        "type": "FeatureCollection", "features": feats,
-        "metadata": {
-            "potrero_id": pot.id, "potrero": pot.nombre, "finca": pot.finca,
-            "fecha": fecha.isoformat() if fecha else None,
-            "parcelas": len(parcelas), "exclusiones": len(exclusiones),
-            "nota": "* masas de parcela estimadas por prorrateo del potrero" if fecha else None,
-        },
     }

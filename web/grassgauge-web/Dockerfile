@@ -9,7 +9,9 @@ ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 FROM nginx:alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-# SPA routing: todo vuelve a index.html
+# El build de Vite usa base '/app/': los assets cuelgan de /app/*,
+# así que dist va a /html/app para que /app/index.html y /app/assets/* resuelvan.
+COPY --from=build /app/dist /usr/share/nginx/html/app
+# SPA routing bajo /app + proxy mismo-origen a la API (sin CORS ni rebuild).
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80

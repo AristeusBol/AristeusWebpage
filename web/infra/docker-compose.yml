@@ -42,6 +42,17 @@ services:
     restart: unless-stopped
     command: uvicorn api.main:app --host 0.0.0.0 --port 8000
 
+  web:
+    build:
+      context: ../grassgauge-web
+      dockerfile: Dockerfile
+    container_name: grassgauge_web
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
 volumes:
   # Nombres explícitos: estables ante renombres del proyecto compose.
   postgis_data:

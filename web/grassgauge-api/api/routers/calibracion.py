@@ -161,33 +161,6 @@ async def subir_foto_calibracion(
     }
 
 
-@router.delete("/api/calibracion/fotos/{foto_id}")
-def eliminar_foto(
-    foto_id: int,
-    uid: int = Depends(get_current_user_id),
-):
-    """Elimina una foto propia (fila + archivo en disco)."""
-    with engine.begin() as conn:
-        row = conn.execute(
-            text("""
-                SELECT foto_path FROM fotos_calibracion
-                WHERE id = :fid AND usuario_id = :uid
-            """),
-            {"fid": foto_id, "uid": uid},
-        ).fetchone()
-        if not row:
-            raise HTTPException(status_code=404, detail=f"Foto {foto_id} no existe o no es tuya")
-        conn.execute(
-            text("DELETE FROM fotos_calibracion WHERE id = :fid AND usuario_id = :uid"),
-            {"fid": foto_id, "uid": uid},
-        )
-    try:
-        (UPLOAD_DIR / row.foto_path).unlink(missing_ok=True)
-    except OSError:
-        pass
-    return {"id": foto_id, "eliminado": True}
-
-
 @router.get("/api/calibracion/fotos")
 def listar_fotos(
     potrero_id: int = Query(..., description="Potrero a listar"),

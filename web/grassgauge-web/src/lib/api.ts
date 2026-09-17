@@ -88,12 +88,6 @@ export interface ExclusionesResponse {
   metadata: { finca: string; count: number };
 }
 
-export interface DetalleGestionResponse {
-  type: 'FeatureCollection';
-  features: { type: 'Feature'; geometry: unknown; properties: Record<string, unknown> }[];
-  metadata: { potrero_id: number; potrero: string; finca: string; fecha: string | null; parcelas: number; exclusiones: number; nota?: string | null };
-}
-
 export interface ParcelaDetalle {
   id: number;
   nombre: string;
@@ -450,11 +444,6 @@ export const api = {
   fincasConPotreros(): Promise<{ fincas: string[] }> {
     return request('/api/potreros/fincas');
   },
-  /** Detalle gestión: potrero + parcelas (prorrateo*) + exclusiones. */
-  detalleGestion(potreroId: number, fecha?: string | null): Promise<DetalleGestionResponse> {
-    const q = fecha ? `?fecha=${encodeURIComponent(fecha)}` : '';
-    return request(`/api/potreros/${potreroId}/detalle${q}`);
-  },
   /** Todas las parcelas de una finca (una llamada para el mapa). */
   parcelasFinca(finca: string, fecha?: string | null): Promise<ParcelasResponse> {
     const q = fecha ? `&fecha=${encodeURIComponent(fecha)}` : '';
@@ -537,16 +526,9 @@ export const api = {
       body: JSON.stringify({ enviar_critico }),
     });
   },
-  /** Asigna un rodeo a una parcela (fecha_salida null = abierto). */
-  crearAsignacion(datos: { rodeo_id: number; parcela_id: number; fecha_entrada: string; fecha_salida?: string | null; notas?: string | null }): Promise<Asignacion> {
-    return request('/api/rotacion', { method: 'POST', body: JSON.stringify(datos) });
-  },
   /** Cierra un pastoreo (fecha_salida) o edita notas. */
   actualizarAsignacion(id: number, datos: { fecha_salida?: string; notas?: string }): Promise<Asignacion> {
     return request(`/api/rotacion/${id}`, { method: 'PATCH', body: JSON.stringify(datos) });
-  },
-  eliminarAsignacion(id: number): Promise<{ id: number; eliminado: boolean }> {
-    return request(`/api/rotacion/${id}`, { method: 'DELETE' });
   },
   /** Balance forrajero por parcela: oferta (fecha) vs consumo actual de los rodeos. */
   balance(finca: string, fecha?: string | null, utilizacion = 50): Promise<BalanceResponse> {

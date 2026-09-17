@@ -25,11 +25,11 @@ const SECCIONES: { titulo: string; items: { id: string; label: string; pronto?: 
   },
   {
     titulo: 'REPORTES',
-    items: [{ id: 'exportar', label: 'Exportar Datos' }],
+    items: [{ id: 'exportar', label: 'Exportar Datos', pronto: true }],
   },
   {
     titulo: 'SOPORTE',
-    items: [{ id: 'ayuda', label: 'Ayuda y Soporte' }],
+    items: [{ id: 'ayuda', label: 'Ayuda y Soporte', pronto: true }],
   },
 ];
 

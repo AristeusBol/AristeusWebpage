@@ -415,7 +415,7 @@ export default function GestionRodeos() {
 
 
   /** Camino actual de un rodeo mapeado a una semana (lista de parcelas por día). */
-  const caminoDe = (rid: number, fechas: string[] = fechasPlan): string[][] => {
+  const caminoDe = useCallback((rid: number, fechas: string[] = fechasPlan): string[][] => {
     const arr: string[][] = fechas.map(() => []);
     const propias = asignaciones
       .filter((a) => a.rodeo_id === rid)
@@ -432,7 +432,7 @@ export default function GestionRodeos() {
       }
     }
     return arr;
-  };
+  }, [asignaciones, fechasPlan]);
 
   /** Parcelas usadas por CUALQUIER rodeo en toda esta semana (bloquean al resto: cada
    * parcela entra una sola vez por semana entre todos los rodeos). */

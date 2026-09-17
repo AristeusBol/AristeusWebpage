@@ -37,6 +37,17 @@ def _mock_engine_conexiones(conns_connect=None, conn_begin=None):
     return eng
 
 
+def _mock_trayectoria(filas, lotes, fin):
+    """Una sola conexión con 3 executes: filas, lotes, finalizadas."""
+    conn = MagicMock()
+    conn.execute.side_effect = [
+        MagicMock(fetchall=lambda: filas),
+        MagicMock(fetchall=lambda: lotes),
+        MagicMock(fetchall=lambda: fin),
+    ]
+    return _mock_engine_conexiones([conn])
+
+
 def _fecha_fila(fecha_entrada: date, fecha_salida: date | None, trayectoria_inicio=None):
     return _fila_row(
         fecha_entrada=fecha_entrada,
@@ -59,15 +70,10 @@ def test_trayectoria_agrupa_por_lote_con_estado_de_etapa():
         MagicMock(id=2, nombre="Lote 2", color=None,
                   cabezas=60, peso_prom_kg=380.0, consumo_pct=2.6),
     ]
-    conn1 = MagicMock()
-    conn1.execute.return_value.fetchall.return_value = filas
-    conn2 = MagicMock()
-    conn2.execute.return_value.fetchall.return_value = lotes
-    conn3 = MagicMock()
-    conn3.execute.return_value.fetchall.return_value = [
-        MagicMock(rodeo_id=1, trayectoria_inicio=hoy - timedelta(days=2), finalizada_en=hoy - timedelta(days=1)),
-    ]
-    with patch("api.routers.rotacion.engine", _mock_engine_conexiones([conn1, conn2, conn3])):
+    with patch("api.routers.rotacion.engine", _mock_trayectoria(
+        filas, lotes,
+        [MagicMock(rodeo_id=1, trayectoria_inicio=hoy - timedelta(days=2), finalizada_en=hoy - timedelta(days=1))],
+    )):
         resp = client.get("/api/rotacion/trayectoria", headers=auth_headers(1))
     assert resp.status_code == 200
     data = resp.json()
@@ -94,22 +100,16 @@ def test_trayectoria_agrupa_por_lote_con_estado_de_etapa():
     assert data["trayectoria"][1]["consumo_diario_ms_kg"] == 592.8
 
 
-def test_trayectoria_agrupa_filas_legadas_sin_inicio():
-    """Filas sin trayectoria_inicio (migración no aplicada) se agrupan por corridas."""
+def test_trayectoria_agrupa_por_inicio():
+    """Filas con trayectoria_inicio se agrupan por su grupo."""
     filas = [
-        _fecha_fila(date(2026, 3, 2), date(2026, 3, 6)),    # corrida 1 (vi)
-        _fecha_fila(date(2026, 3, 7), date(2026, 3, 10)),   # corrida 1 (sigue)
-        _fecha_fila(date(2026, 4, 1), None),                # corrida 2 (hueco)
+        _fecha_fila(date(2026, 3, 2), date(2026, 3, 6), trayectoria_inicio=date(2026, 3, 2)),
+        _fecha_fila(date(2026, 3, 7), date(2026, 3, 10), trayectoria_inicio=date(2026, 3, 2)),
+        _fecha_fila(date(2026, 4, 1), None, trayectoria_inicio=date(2026, 4, 1)),
     ]
     lotes = [MagicMock(id=1, nombre="Lote 1", color=None,
                        cabezas=80, peso_prom_kg=450.0, consumo_pct=2.8)]
-    conn1 = MagicMock()
-    conn1.execute.return_value.fetchall.return_value = filas
-    conn2 = MagicMock()
-    conn2.execute.return_value.fetchall.return_value = lotes
-    conn3 = MagicMock()
-    conn3.execute.return_value.fetchall.return_value = []
-    with patch("api.routers.rotacion.engine", _mock_engine_conexiones([conn1, conn2, conn3])):
+    with patch("api.routers.rotacion.engine", _mock_trayectoria(filas, lotes, [])):
         resp = client.get("/api/rotacion/trayectoria", headers=auth_headers(1))
     assert resp.status_code == 200
     lote1 = resp.json()["trayectoria"][0]
@@ -124,13 +124,7 @@ def test_trayectoria_agrupa_filas_legadas_sin_inicio():
 def test_trayectoria_incluye_todos_los_lotes():
     lotes = [MagicMock(id=1, nombre="Activo", color=None,
                        cabezas=80, peso_prom_kg=450.0, consumo_pct=2.8)]
-    conn1 = MagicMock()
-    conn1.execute.return_value.fetchall.return_value = []
-    conn2 = MagicMock()
-    conn2.execute.return_value.fetchall.return_value = lotes
-    conn3 = MagicMock()
-    conn3.execute.return_value.fetchall.return_value = []
-    with patch("api.routers.rotacion.engine", _mock_engine_conexiones([conn1, conn2, conn3])):
+    with patch("api.routers.rotacion.engine", _mock_trayectoria([], lotes, [])):
         resp = client.get("/api/rotacion/trayectoria", headers=auth_headers(1))
     assert resp.status_code == 200
     assert [t["rodeo"] for t in resp.json()["trayectoria"]] == ["Activo"]
@@ -145,7 +139,7 @@ def test_finalizar_trayectoria_ok():
         resp = client.post(f"/api/rotacion/trayectoria/1/{inicio}/finalizar", headers=auth_headers(1))
     assert resp.status_code == 200
     assert resp.json() == {"inicio": "2026-04-13", "finalizada": True, "parcelas_a_critico": 0}
-    insert = conn_begin.execute.call_args[0]
+    insert = conn_begin.execute.call_args
     assert "INSERT INTO trayectorias_finalizadas" in str(insert[0][0])
     assert insert[0][1] == {"uid": 1, "rid": 1, "inicio": inicio}
 
@@ -204,71 +198,6 @@ def test_listar_rotacion_ok():
     assert data["resumen"]["parcelas_ocupadas"] == 1
 
 
-def test_crear_asignacion_201():
-    conn_checks = MagicMock()
-    conn_checks.execute.return_value.fetchone.side_effect = [
-        (1,),                                # rodeo existe
-        MagicMock(id=2),    # parcela existe
-    ]
-    conn_begin = MagicMock()
-    conn_begin.execute.return_value.fetchone.return_value = MagicMock(id=7)
-    conn_fila = MagicMock()
-    conn_fila.execute.return_value.fetchone.return_value = _fila_row()
-    with patch(
-        "api.routers.rotacion.engine",
-        _mock_engine_conexiones([conn_checks, conn_fila], conn_begin),
-    ):
-        resp = client.post(
-            "/api/rotacion",
-            json={"rodeo_id": 1, "parcela_id": 2, "fecha_entrada": "2026-03-01"},
-            headers=auth_headers(1),
-        )
-    assert resp.status_code == 201
-    assert resp.json()["id"] == 7
-    params = conn_begin.execute.call_args[0][1]
-    assert params["rid"] == 1 and params["pid"] == 2
-    assert params["entrada"].isoformat() == "2026-03-01"
-    assert params["salida"] is None
-    assert params["uid"] == 1
-
-
-def test_crear_asignacion_rodeo_ajeno_404():
-    conn = MagicMock()
-    conn.execute.return_value.fetchone.side_effect = [None, MagicMock(id=2)]
-    with patch("api.routers.rotacion.engine", _mock_engine_conexiones([conn])):
-        resp = client.post(
-            "/api/rotacion",
-            json={"rodeo_id": 999, "parcela_id": 2, "fecha_entrada": "2026-03-01"},
-            headers=auth_headers(1),
-        )
-    assert resp.status_code == 404
-
-
-def test_crear_asignacion_parcela_inexistente_404():
-    conn = MagicMock()
-    conn.execute.return_value.fetchone.side_effect = [
-        (1,),
-        None,
-    ]
-    with patch("api.routers.rotacion.engine", _mock_engine_conexiones([conn])):
-        resp = client.post(
-            "/api/rotacion",
-            json={"rodeo_id": 1, "parcela_id": 999, "fecha_entrada": "2026-03-01"},
-            headers=auth_headers(1),
-        )
-    assert resp.status_code == 404
-
-
-def test_crear_asignacion_salida_antes_entrada_422():
-    resp = client.post(
-        "/api/rotacion",
-        json={"rodeo_id": 1, "parcela_id": 2,
-              "fecha_entrada": "2026-03-10", "fecha_salida": "2026-03-01"},
-        headers=auth_headers(1),
-    )
-    assert resp.status_code == 422
-
-
 def test_cerrar_asignacion_200():
     conn_check = MagicMock()
     conn_check.execute.return_value.fetchone.return_value = MagicMock(id=7, fecha_entrada=date(2026, 3, 1))
@@ -297,14 +226,6 @@ def test_cerrar_asignacion_salida_antes_entrada_400():
             headers=auth_headers(1),
         )
     assert resp.status_code == 400
-
-
-def test_eliminar_asignacion_404():
-    conn_begin = MagicMock()
-    conn_begin.execute.return_value.fetchone.return_value = None
-    with patch("api.routers.rotacion.engine", _mock_engine_conexiones([], conn_begin)):
-        resp = client.delete("/api/rotacion/99", headers=auth_headers(1))
-    assert resp.status_code == 404
 
 
 def test_armar_semana_ok():
@@ -377,7 +298,7 @@ def test_armar_semana_repite_dias_mismo_lote_409():
     assert "Se repiten días" in resp.json()["detail"]
 
 
-def test_armar_semana_reemplaza_y_legado_excluido():
+def test_armar_semana_reemplaza_excluye_grupo_anterior():
     """Al editar (reemplazar_inicio) las filas del grupo anterior se borran y
     no cuentan como solape; las nuevas quedan con trayectoria_inicio."""
     inicio = date(2026, 4, 13)
@@ -387,7 +308,8 @@ def test_armar_semana_reemplaza_y_legado_excluido():
         MagicMock(id=1, nombre="A1"),
     ]
     conn1.execute.return_value.fetchall.return_value = [
-        MagicMock(fecha_entrada=date(2026, 4, 13), fecha_salida=date(2026, 4, 14)),  # el propio
+        # El grupo propio queda excluido por reemplazar_inicio en el SQL;
+        # el mock simula el resultado post-WHERE: sin filas cruzadas.
     ]
     conn_begin = MagicMock()
     conn_begin.execute.return_value.fetchall.return_value = []
@@ -408,7 +330,7 @@ def test_armar_semana_reemplaza_y_legado_excluido():
     assert resp.status_code == 200
     deletes = [c for c in conn_begin.execute.call_args_list if "DELETE FROM asignaciones" in str(c[0][0])]
     assert len(deletes) == 1
-    assert deletes[0][0][1] == {"uid": 1, "rid": 1, "reemplazo": inicio, "inicio": inicio, "fin": date(2026, 4, 19)}
+    assert deletes[0][0][1] == {"uid": 1, "rid": 1, "reemplazo": inicio}
     inserts = [c for c in conn_begin.execute.call_args_list if "INSERT INTO asignaciones" in str(c[0][0])]
     assert len(inserts) == 1
     assert inserts[0][0][1]["trayectoria"] == inicio
@@ -422,8 +344,11 @@ def test_eliminar_trayectoria_borra_grupo():
         resp = client.delete(f"/api/rotacion/trayectoria/1/{inicio}", headers=auth_headers(1))
     assert resp.status_code == 200
     assert resp.json()["asignaciones"] == 2
-    params = conn_begin.execute.call_args[0][1]
-    assert params["rid"] == 1 and params["inicio"] == inicio and params["fin"] == date(2026, 4, 19)
+    deletes = [c for c in conn_begin.execute.call_args_list if "DELETE FROM asignaciones" in str(c[0][0])]
+    assert len(deletes) == 1
+    params = deletes[0][0][1]
+    assert params["rid"] == 1 and params["inicio"] == inicio
+    assert "trayectoria_inicio IS NULL" not in str(deletes[0][0][0])
 
 
 def test_armar_semana_varias_parcelas_por_dia():
@@ -459,16 +384,40 @@ def test_armar_semana_varias_parcelas_por_dia():
     p1, p2 = inserts[0][0][1], inserts[1][0][1]
     assert p1["pid"] == 1 and p1["entrada"] == date(2026, 4, 13) and p1["salida"] == date(2026, 4, 13)
     assert p2["pid"] == 2 and p2["entrada"] == date(2026, 4, 13) and p2["salida"] == date(2026, 4, 14)
+    # Guardar no toca estados: solo finalizar con enviar_critico marca a crítico.
+    assert not [c for c in conn_begin.execute.call_args_list if "UPDATE parcelas" in str(c[0][0])]
 
 
-    passa = [c for c in conn_begin.execute.call_args_list if "UPDATE parcelas" in str(c[0][0])]
-    assert len(passa) == 2
-    assert {p[0][1]["pid"] for p in passa} == {1, 2}
+def test_armar_semana_no_toca_estado():
+    """Guardar una trayectoria no cambia parcelas.estado (solo finalizar pregunta)."""
+    inicio = date(2026, 4, 13)
+    conn1 = MagicMock()
+    conn1.execute.return_value.fetchone.side_effect = [
+        (1, "Lote 1"),
+        MagicMock(id=1, nombre="A1"),
+    ]
+    conn1.execute.return_value.fetchall.return_value = []
+    conn_begin = MagicMock()
+    conn_begin.execute.return_value.fetchall.return_value = []
+    with patch(
+        "api.routers.rotacion.engine",
+        _mock_engine_conexiones([conn1], conn_begin),
+    ):
+        resp = client.post(
+            "/api/rotacion/semana",
+            json={
+                "rodeo_id": 1,
+                "inicio": "2026-04-13",
+                "dias": [[1], [], [], [], [], [], []],
+            },
+            headers=auth_headers(1),
+        )
+    assert resp.status_code == 200
+    assert not [c for c in conn_begin.execute.call_args_list if "UPDATE parcelas" in str(c[0][0])]
+    assert len([c for c in conn_begin.execute.call_args_list if "INSERT INTO asignaciones" in str(c[0][0])]) == 1
 
 
-def test_armar_semana_marca_critico_automatico():
-    """Al guardar, las parcelas usadas pasan a 'critico' (rebrote manual)."""
-    """La parcela 2 ya está ocupada esa semana por otro rodeo."""
+def test_armar_semana_conflicto_otro_rodeo_409():
     inicio = date(2026, 4, 13)
     conn1 = MagicMock()
     conn1.execute.return_value.fetchone.side_effect = [
@@ -513,5 +462,5 @@ def test_armar_semana_len_invalido_422():
 
 def test_rotacion_sin_auth_401():
     assert client.get("/api/rotacion").status_code == 401
-    assert client.post("/api/rotacion", json={}).status_code == 401
+    assert client.patch("/api/rotacion/7", json={}).status_code == 401
     assert client.post("/api/rotacion/semana", json={}).status_code == 401

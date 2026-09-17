@@ -85,8 +85,10 @@ class PotreroCreate(BaseModel):
 
 
 class PotreroUpdate(BaseModel):
+    """Renombra / redibuja un potrero propio. La finca la gestiona el
+    operador (cambiarla dejaría hijas con finca stale): no se expone."""
+
     nombre: Optional[str] = None
-    finca: Optional[str] = None
     geom: Optional[Dict[str, Any]] = None
 
     _geom = field_validator("geom")(classmethod(lambda cls, v: _validar_polygon_geom(v) if v is not None else v))
@@ -101,18 +103,6 @@ class PotreroUpdate(BaseModel):
             raise ValueError("no puede ser vacío")
         if len(v) > 50:
             raise ValueError("máximo 50 caracteres")
-        return v
-
-    @field_validator("finca")
-    @classmethod
-    def _finca_opt(cls, v: Optional[str]) -> Optional[str]:
-        if v is None:
-            return v
-        v = v.strip()
-        if not v:
-            raise ValueError("no puede ser vacío")
-        if len(v) > 100:
-            raise ValueError("máximo 100 caracteres")
         return v
 
 
@@ -277,28 +267,6 @@ def _validar_notas_opt(v: Optional[str]) -> Optional[str]:
     if len(v) > 280:
         raise ValueError("máximo 280 caracteres")
     return v
-
-
-class AsignacionCreate(BaseModel):
-    rodeo_id: int
-    parcela_id: int
-    fecha_entrada: date
-    fecha_salida: Optional[date] = None
-    notas: Optional[str] = None
-
-    _rodeo_id = field_validator("rodeo_id")(classmethod(lambda cls, v: _validar_id_positivo(v, "rodeo_id")))
-    _parcela_id = field_validator("parcela_id")(classmethod(lambda cls, v: _validar_id_positivo(v, "parcela_id")))
-    _notas = field_validator("notas")(classmethod(lambda cls, v: _validar_notas_opt(v)))
-
-    @field_validator("fecha_salida")
-    @classmethod
-    def _salida_no_anterior(cls, v: Optional[date], info) -> Optional[date]:
-        if v is None:
-            return v
-        entrada = info.data.get("fecha_entrada")
-        if entrada is not None and v < entrada:
-            raise ValueError("fecha_salida no puede ser anterior a fecha_entrada")
-        return v
 
 
 class AsignacionUpdate(BaseModel):

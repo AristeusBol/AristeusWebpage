@@ -118,11 +118,6 @@ def test_fincas_con_potreros_requiere_auth():
     assert resp.status_code == 401
 
 
-def test_detalle_gestion_404_sin_auth():
-    resp = client.get("/api/potreros/999/detalle")
-    assert resp.status_code == 401
-
-
 def test_sugerir_nombre_requiere_auth():
     resp = client.get("/api/parcelas/sugerir-nombre?potrero_id=1")
     assert resp.status_code == 401

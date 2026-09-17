@@ -5,7 +5,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from api.routers.rodeos import _consumo_diario
-from api.schemas import CATEGORIAS_RODEO, AsignacionCreate, AsignacionUpdate, FinalizarTrayectoria, SemanaCreate
+from api.schemas import CATEGORIAS_RODEO, AsignacionUpdate, FinalizarTrayectoria, SemanaCreate
 from core.db import engine
 from core.seguridad import get_current_user_id
 
@@ -113,7 +113,6 @@ def trayectoria_rotacion(uid: int = Depends(get_current_user_id)):
             text(_FILAS_SQL + " ORDER BY r.id ASC, a.fecha_entrada ASC, a.id ASC"),
             {"uid": uid},
         ).fetchall()
-    with engine.connect() as conn:
         lotes = conn.execute(
             text("""
                 SELECT id, nombre, color, cabezas, peso_prom_kg, consumo_pct
@@ -122,7 +121,6 @@ def trayectoria_rotacion(uid: int = Depends(get_current_user_id)):
             """),
             {"uid": uid},
         ).fetchall()
-    with engine.connect() as conn:
         fin = conn.execute(
             text("""
                 SELECT rodeo_id, trayectoria_inicio, finalizada_en
@@ -139,7 +137,7 @@ def trayectoria_rotacion(uid: int = Depends(get_current_user_id)):
 
     trayectoria = []
     for lote in lotes:
-        by_grupo: dict[date | None, list] = {}
+        by_grupo: dict[date, list] = {}
         for r in por_rodeo.get(int(lote.id), []):
             entrada = r.fecha_entrada
             salida = r.fecha_salida
@@ -159,19 +157,13 @@ def trayectoria_rotacion(uid: int = Depends(get_current_user_id)):
         trayectorias: list[dict] = []
         for inicio, etapas in by_grupo.items():
             trayectorias.append(_trayectoria_bloque(inicio, etapas))
-        # Filas legadas sin grupo (migración no aplicada): se agrupan igual.
-        if None in by_grupo:
-            legado = [e for e in trayectorias if e["inicio"] is None]
-            trayectorias = [e for e in trayectorias if e["inicio"] is not None]
-            trayectorias.extend(_agrupar_legado(legado[0]["etapas"]))
         for t in trayectorias:
             t["finalizada"] = False
             t["finalizada_en"] = None
-            if t["inicio"] is not None:
-                marca = marcadas.get((int(lote.id), date.fromisoformat(t["inicio"])))
-                if marca is not None:
-                    t["finalizada"] = True
-                    t["finalizada_en"] = marca.isoformat()
+            marca = marcadas.get((int(lote.id), date.fromisoformat(t["inicio"])))
+            if marca is not None:
+                t["finalizada"] = True
+                t["finalizada_en"] = marca.isoformat()
         trayectorias.sort(key=lambda t: t["inicio"], reverse=True)
         trayectoria.append({
             "rodeo_id": int(lote.id),
@@ -186,36 +178,13 @@ def trayectoria_rotacion(uid: int = Depends(get_current_user_id)):
     return {"trayectoria": trayectoria}
 
 
-def _trayectoria_bloque(inicio: date | None, etapas: list) -> dict:
+def _trayectoria_bloque(inicio: date, etapas: list) -> dict:
     """Bloque de una trayectoria: ventana de 7 días desde su inicio + etapas."""
     return {
-        "inicio": inicio.isoformat() if inicio else None,
-        "dias": [(inicio + timedelta(days=i)).isoformat() for i in range(7)] if inicio else None,
+        "inicio": inicio.isoformat(),
+        "dias": [(inicio + timedelta(days=i)).isoformat() for i in range(7)],
         "etapas": etapas,
     }
-
-
-def _agrupar_legado(etapas: list[dict]) -> list[dict]:
-    """Agrupa filas sin trayectoria_inicio en corridas independientes (misma
-    heurística que la migración): nueva cuando hay hueco o cierre en domingo."""
-    etapas = sorted(etapas, key=lambda e: (e["fecha_entrada"], e["id"]))
-    corridas: list[list[dict]] = []
-    prev_salida: date | None = None
-    primer = True
-    for e in etapas:
-        entrada = date.fromisoformat(e["fecha_entrada"])
-        salida = date.fromisoformat(e["fecha_salida"]) if e["fecha_salida"] else None
-        nueva = primer or (
-            prev_salida is not None
-            and (prev_salida < entrada - timedelta(days=1) or prev_salida.weekday() == 6)
-        )
-        if nueva:
-            corridas.append([e])
-        else:
-            corridas[-1].append(e)
-        primer = False
-        prev_salida = salida
-    return [_trayectoria_bloque(date.fromisoformat(cor[0]["fecha_entrada"]), cor) for cor in corridas]
 
 
 @router.post("/semana", status_code=200)
@@ -247,11 +216,9 @@ def armar_semana(body: SemanaCreate, uid: int = Depends(get_current_user_id)):
                 raise HTTPException(status_code=404, detail=f"Parcela {pid} no existe o no es tuya")
             nombres[pid] = parcela.nombre
         # Mismo lote: días ya cubiertos por otras trayectorias (excepto la que
-        # se está reemplazando: su grupo + filas legadas sin grupo y en su ventana).
-        excluir_grupo = "FALSE" if body.reemplazar_inicio is None else """
-            (trayectoria_inicio = :reemplazo
-             OR (trayectoria_inicio IS NULL
-                 AND fecha_entrada <= :fin AND (fecha_salida IS NULL OR fecha_salida >= :inicio)))"""
+        # se está reemplazando: su grupo).
+        excluir_grupo = "FALSE" if body.reemplazar_inicio is None else \
+            "trayectoria_inicio = :reemplazo"
         cruzadas = conn.execute(
             text(f"""
                 SELECT fecha_entrada, fecha_salida
@@ -303,13 +270,9 @@ def armar_semana(body: SemanaCreate, uid: int = Depends(get_current_user_id)):
                     text("""
                         DELETE FROM asignaciones
                         WHERE usuario_id = :uid AND rodeo_id = :rid
-                          AND (trayectoria_inicio = :reemplazo
-                               OR (trayectoria_inicio IS NULL
-                                   AND fecha_entrada <= :fin
-                                   AND (fecha_salida IS NULL OR fecha_salida >= :inicio)))
+                          AND trayectoria_inicio = :reemplazo
                     """),
-                    {"uid": uid, "rid": body.rodeo_id, "reemplazo": body.reemplazar_inicio,
-                     "inicio": body.inicio, "fin": fin},
+                    {"uid": uid, "rid": body.rodeo_id, "reemplazo": body.reemplazar_inicio},
                 )
                 conn.execute(
                     text("""
@@ -328,15 +291,8 @@ def armar_semana(body: SemanaCreate, uid: int = Depends(get_current_user_id)):
                     {"uid": uid, "rid": body.rodeo_id, "pid": pid,
                      "entrada": entrada, "salida": salida, "trayectoria": body.inicio},
                 )
-            for parcela_id in {p for p, _, _ in pasos}:
-                conn.execute(
-                    text("""
-                        UPDATE parcelas
-                        SET estado = 'critico'
-                        WHERE id = :pid AND usuario_id = :uid
-                    """),
-                    {"pid": parcela_id, "uid": uid},
-                )
+            # NOTA: guardar NO toca parcelas.estado. Solo el finalizar con
+            # enviar_critico (pregunta explícita en la UI) marca a crítico.
     except HTTPException:
         raise
     except IntegrityError:
@@ -355,45 +311,6 @@ def armar_semana(body: SemanaCreate, uid: int = Depends(get_current_user_id)):
             for i, f in enumerate(fechas)
         ],
     }
-
-
-@router.post("", status_code=201)
-def crear_asignacion(body: AsignacionCreate, uid: int = Depends(get_current_user_id)):
-    with engine.connect() as conn:
-        rodeo = conn.execute(
-            text("SELECT id FROM rodeos WHERE id = :rid AND usuario_id = :uid"),
-            {"rid": body.rodeo_id, "uid": uid},
-        ).fetchone()
-        if not rodeo:
-            raise HTTPException(status_code=404, detail=f"Rodeo {body.rodeo_id} no existe o no es tuyo")
-        parcela = conn.execute(
-            text("SELECT id FROM parcelas WHERE id = :pid AND usuario_id = :uid"),
-            {"pid": body.parcela_id, "uid": uid},
-        ).fetchone()
-        if not parcela:
-            raise HTTPException(status_code=404, detail=f"Parcela {body.parcela_id} no existe o no es tuya")
-    try:
-        with engine.begin() as conn:
-            row = conn.execute(
-                text("""
-                    INSERT INTO asignaciones (usuario_id, rodeo_id, parcela_id, fecha_entrada, fecha_salida, notas, trayectoria_inicio)
-                    VALUES (:uid, :rid, :pid, :entrada, :salida, :notas, :trayectoria)
-                    RETURNING id
-                """),
-                {
-                    "uid": uid, "rid": body.rodeo_id, "pid": body.parcela_id,
-                    "entrada": body.fecha_entrada, "salida": body.fecha_salida,
-                    "notas": body.notas, "trayectoria": body.fecha_entrada,
-                },
-            ).fetchone()
-    except IntegrityError:
-        raise HTTPException(status_code=409, detail="No se pudo crear la asignación (conflicto de datos).")
-    with engine.connect() as conn:
-        creada = conn.execute(
-            text(_FILAS_SQL + " AND a.id = :aid"),
-            {"uid": uid, "aid": row.id},
-        ).fetchone()
-    return _fila(creada)
 
 
 @router.patch("/{asignacion_id}")
@@ -431,34 +348,18 @@ def actualizar_asignacion(
     return _fila(fila)
 
 
-@router.delete("/{asignacion_id}")
-def eliminar_asignacion(asignacion_id: int, uid: int = Depends(get_current_user_id)):
-    with engine.begin() as conn:
-        row = conn.execute(
-            text("DELETE FROM asignaciones WHERE id = :aid AND usuario_id = :uid RETURNING id"),
-            {"aid": asignacion_id, "uid": uid},
-        ).fetchone()
-    if not row:
-        raise HTTPException(status_code=404, detail=f"Asignación {asignacion_id} no existe o no es tuya")
-    return {"id": asignacion_id, "eliminado": True}
-
-
 @router.delete("/trayectoria/{rodeo_id}/{inicio}")
 def eliminar_trayectoria(rodeo_id: int, inicio: date, uid: int = Depends(get_current_user_id)):
     """Borra una trayectoria completa de un lote (ventana de 7 días desde inicio)."""
-    fin = inicio + timedelta(days=6)
     with engine.begin() as conn:
         filas = conn.execute(
             text("""
                 DELETE FROM asignaciones
                 WHERE usuario_id = :uid AND rodeo_id = :rid
-                  AND (trayectoria_inicio = :inicio
-                       OR (trayectoria_inicio IS NULL
-                           AND fecha_entrada <= :fin
-                           AND (fecha_salida IS NULL OR fecha_salida >= :inicio)))
+                  AND trayectoria_inicio = :inicio
                 RETURNING id
             """),
-            {"uid": uid, "rid": rodeo_id, "inicio": inicio, "fin": fin},
+            {"uid": uid, "rid": rodeo_id, "inicio": inicio},
         ).fetchall()
         conn.execute(
             text("""
