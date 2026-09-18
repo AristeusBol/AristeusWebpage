@@ -163,7 +163,11 @@ def get_mapa_tile(
         media_type="application/x-protobuf",
         headers={
             "Content-Disposition": "inline",
-            "Cache-Control": "private, max-age=300",
+            # El contenido va direccionado por (finca, fecha, tipo): si esos
+            # no cambian, el tile es inmutable. 1h de caché evita recalcular
+            # y retransferir al revisitar fechas (gran parte de los ~25s).
+            # Tras re-ingestar datos, forzar recarga (Ctrl+Shift+R).
+            "Cache-Control": "public, max-age=3600",
         },
     )
 

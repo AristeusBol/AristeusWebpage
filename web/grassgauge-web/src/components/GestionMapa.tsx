@@ -115,7 +115,7 @@ export default function GestionMapa({
         if (!pot) map.addSource('g-potreros', { type: 'geojson', data: fcPot });
         else pot.setData(fcPot);
         map.addLayer({ id: 'g-potreros-fill', type: 'fill', source: 'g-potreros', paint: { 'fill-color': '#ffffff', 'fill-opacity': 0.06 } });
-        map.addLayer({ id: 'g-potreros-line', type: 'line', source: 'g-potreros', paint: { 'line-color': '#ffffff', 'line-width': 2, 'line-opacity': 1 } });
+        map.addLayer({ id: 'g-potreros-line', type: 'line', source: 'g-potreros', paint: { 'line-color': '#ffffff', 'line-width': 2.5, 'line-opacity': 1 } });
         map.addLayer({ id: 'g-potreros-sel', type: 'line', source: 'g-potreros', filter: selPot, paint: { 'line-color': '#facc15', 'line-width': 4 } });
         map.addLayer({
           id: 'g-potreros-label', type: 'symbol', source: 'g-potreros',
@@ -136,7 +136,7 @@ export default function GestionMapa({
         if (!exc) map.addSource('g-exclusiones', { type: 'geojson', data: fcExc });
         else exc.setData(fcExc);
         map.addLayer({ id: 'g-exclusiones-fill', type: 'fill', source: 'g-exclusiones', paint: { 'fill-color': '#dc2626', 'fill-opacity': 0.35 } });
-        map.addLayer({ id: 'g-exclusiones-line', type: 'line', source: 'g-exclusiones', paint: { 'line-color': '#fecaca', 'line-width': 1.5, 'line-dasharray': [3, 2] } });
+        map.addLayer({ id: 'g-exclusiones-line', type: 'line', source: 'g-exclusiones', paint: { 'line-color': '#ffffff', 'line-width': 2.5, 'line-opacity': 1 } });
         map.addLayer({
           id: 'g-exclusiones-label', type: 'symbol', source: 'g-exclusiones',
           layout: { 'text-field': ['get', 'etiqueta'], 'text-size': 11, 'text-allow-overlap': true },
@@ -152,8 +152,8 @@ export default function GestionMapa({
         if (!par) map.addSource('g-parcelas', { type: 'geojson', data: fcPar });
         else par.setData(fcPar);
         map.addLayer({ id: 'g-parcelas-fill', type: 'fill', source: 'g-parcelas', paint: { 'fill-color': '#facc15', 'fill-opacity': 0 } });
-        map.addLayer({ id: 'g-parcelas-line', type: 'line', source: 'g-parcelas', filter: noSelPar, paint: { 'line-color': '#000000', 'line-width': 2, 'line-dasharray': [2, 1] } });
-        map.addLayer({ id: 'g-parcelas-sel', type: 'line', source: 'g-parcelas', filter: selPar, paint: { 'line-color': '#22d3ee', 'line-width': 2 } });
+        map.addLayer({ id: 'g-parcelas-line', type: 'line', source: 'g-parcelas', filter: noSelPar, paint: { 'line-color': '#e2e8f0', 'line-width': 1, 'line-opacity': 0.9 } });
+        map.addLayer({ id: 'g-parcelas-sel', type: 'line', source: 'g-parcelas', filter: selPar, paint: { 'line-color': '#22d3ee', 'line-width': 3 } });
         map.addLayer({
           id: 'g-parcelas-label', type: 'symbol', source: 'g-parcelas',
           layout: { 'text-field': ['get', 'etiqueta'], 'text-size': 11, 'text-allow-overlap': true },

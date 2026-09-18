@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -14,6 +15,10 @@ app = FastAPI(
 )
 
 _WILDCARD_CORS = len(CORS_ORIGINS) == 1 and CORS_ORIGINS[0] == "*"
+# Comprime respuestas grandes (tiles MVT de 1MB+, GeoJSON): la red era
+# gran parte de los ~25s por fecha. Solo actúa si el cliente manda
+# Accept-Encoding: gzip (>= minimum_size bytes).
+app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=6)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS if not _WILDCARD_CORS else ["*"],

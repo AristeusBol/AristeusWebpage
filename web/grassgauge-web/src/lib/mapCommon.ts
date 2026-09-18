@@ -1,5 +1,6 @@
 import {
   Map,
+  config as maplibreConfig,
   type RequestParameters,
   type StyleSpecification,
 } from 'maplibre-gl';
@@ -53,6 +54,14 @@ export const INITIAL_CENTER: [number, number] = [-61.048, -15.955];
 export const INITIAL_ZOOM = 13;
 
 export const API_URL = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/$/, '');
+
+/** Worker de maplibre-gl: el bundle resuelve `./maplibre-gl-worker.mjs`
+ *  relativo al chunk, que Vite no emite (caía al fallback SPA del index y
+ *  el dispatcher nunca iniciaba: sin bordes ni densidad, sin errores).
+ *  Se sirven copias fijas desde `public/` (deben coincidir con la versión
+ *  instalada de maplibre-gl; el worker importa `./maplibre-gl-shared.mjs`
+ *  como hermano) y se apunta WORKER_URL ahí. */
+maplibreConfig.WORKER_URL = `${import.meta.env.BASE_URL}maplibre-gl-worker.mjs`;
 
 /** Único modo: satélite Esri (el modo calles no existe). */
 export function buildStyleEsri(): StyleSpecification {

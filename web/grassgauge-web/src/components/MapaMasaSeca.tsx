@@ -115,17 +115,11 @@ export default function MapaMasaSeca({ features, selectedId, onSelect, finca, fe
           paint: { 'fill-color': '#ffffff', 'fill-opacity': 0 },
         });
         map.addLayer({
-          id: 'potreros-casing',
+          id: 'potreros-line',
           type: 'line',
           source: 'potreros',
-        paint: { 'line-color': '#052e16', 'line-width': 3, 'line-opacity': 0.9 },
-      });
-      map.addLayer({
-        id: 'potreros-line',
-        type: 'line',
-        source: 'potreros',
-        paint: { 'line-color': '#ffffff', 'line-width': 1.5, 'line-opacity': 1 },
-      });
+          paint: { 'line-color': '#ffffff', 'line-width': 2.5, 'line-opacity': 1 },
+        });
         map.addLayer({
           id: 'potreros-sel-halo',
           type: 'line',
@@ -196,7 +190,7 @@ export default function MapaMasaSeca({ features, selectedId, onSelect, finca, fe
                 'fill-antialias': false,
               },
             },
-            'potreros-casing',
+            'potreros-line',
           );
         } else if (lastTilesRef.current !== tiles[0]) {
           // Solo recargar si cambió finca/fecha/tipo: si no, cada sync
@@ -220,7 +214,7 @@ export default function MapaMasaSeca({ features, selectedId, onSelect, finca, fe
       if (f && fe && excRef.current.length > 0) {
         const fcExc = { type: 'FeatureCollection', features: excRef.current } as FeatureCollection;
         const exc = map.getSource('exclusiones') as GeoJSONSource | undefined;
-        const before = map.getLayer('potreros-casing') ? 'potreros-casing' : undefined;
+        const before = map.getLayer('potreros-line') ? 'potreros-line' : undefined;
         if (!map.getLayer('exclusiones-fill')) {
           if (!exc) map.addSource('exclusiones', { type: 'geojson', data: fcExc });
           else exc.setData(fcExc);
@@ -238,7 +232,7 @@ export default function MapaMasaSeca({ features, selectedId, onSelect, finca, fe
               id: 'exclusiones-line',
               type: 'line',
               source: 'exclusiones',
-              paint: { 'line-color': '#e5e7eb', 'line-width': 1.5, 'line-dasharray': [3, 2], 'line-opacity': 0.9 },
+              paint: { 'line-color': '#ffffff', 'line-width': 2.5, 'line-opacity': 1 },
             },
             before,
           );
@@ -260,13 +254,13 @@ export default function MapaMasaSeca({ features, selectedId, onSelect, finca, fe
       if (mostrarParcRef.current && parcRef.current.length > 0) {
         const fcPar = { type: 'FeatureCollection', features: parcRef.current } as FeatureCollection;
         const par = map.getSource('parcelas') as GeoJSONSource | undefined;
-        const beforePar = map.getLayer('potreros-casing') ? 'potreros-casing' : undefined;
+        const beforePar = map.getLayer('potreros-line') ? 'potreros-line' : undefined;
         if (!map.getLayer('parcelas-fill')) {
           if (!par) map.addSource('parcelas', { type: 'geojson', data: fcPar });
           else par.setData(fcPar);
           map.addLayer({ id: 'parcelas-fill', type: 'fill', source: 'parcelas', paint: { 'fill-color': '#facc15', 'fill-opacity': 0 } }, beforePar);
-          map.addLayer({ id: 'parcelas-line', type: 'line', source: 'parcelas', filter: noSelPar, paint: { 'line-color': '#000000', 'line-width': 2, 'line-dasharray': [2, 1] } }, beforePar);
-          map.addLayer({ id: 'parcelas-sel', type: 'line', source: 'parcelas', filter: selPar, paint: { 'line-color': '#22d3ee', 'line-width': 2 } }, beforePar);
+          map.addLayer({ id: 'parcelas-line', type: 'line', source: 'parcelas', filter: noSelPar, paint: { 'line-color': '#e2e8f0', 'line-width': 1, 'line-opacity': 0.9 } }, beforePar);
+          map.addLayer({ id: 'parcelas-sel', type: 'line', source: 'parcelas', filter: selPar, paint: { 'line-color': '#22d3ee', 'line-width': 3 } }, beforePar);
           map.addLayer({
             id: 'parcelas-label', type: 'symbol', source: 'parcelas', minzoom: 14,
             layout: { 'text-field': ['get', 'etiqueta'], 'text-size': 11, 'text-allow-overlap': false },

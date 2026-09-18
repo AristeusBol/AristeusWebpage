@@ -9,7 +9,7 @@ import {
   INITIAL_CENTER, INITIAL_ZOOM, bboxDe, buildStyleEsri,
   encuadrar, transformRequestTiles,
 } from '../lib/mapCommon';
-import type { PotreroFeature } from './MapaMasaSeca';
+import type { ExclusionOverlayFeature, PotreroFeature } from './MapaMasaSeca';
 
 export interface MapaRotacionParcelaFeature {
   type: 'Feature';
@@ -152,20 +152,22 @@ interface Props {
   parcelaSeleccionada: number | null;
   onSeleccionarParcela: (id: number | null) => void;
   secuencias?: Map<number, SecuenciaPin>;
+  /** Zonas de exclusión: se pintan de blanco sólido (sin forraje). */
+  exclusiones?: ExclusionOverlayFeature[];
 }
 
 export default function MapaRotacion({
-  potreros, parcelas, parcelaSeleccionada, onSeleccionarParcela, secuencias,
+  potreros, parcelas, parcelaSeleccionada, onSeleccionarParcela, secuencias, exclusiones = [],
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibre | null>(null);
   const markersRef = useRef<Marker[]>([]);
-  const dataRef = useRef({ potreros, parcelas, parcelaSeleccionada, secuencias });
+  const dataRef = useRef({ potreros, parcelas, parcelaSeleccionada, secuencias, exclusiones });
   const onSelectRef = useRef(onSeleccionarParcela);
   const [status, setStatus] = useState<'cargando' | 'listo'>('cargando');
   const [mapError, setMapError] = useState<string | null>(null);
 
-  dataRef.current = { potreros, parcelas, parcelaSeleccionada, secuencias };
+  dataRef.current = { potreros, parcelas, parcelaSeleccionada, secuencias, exclusiones };
   onSelectRef.current = onSeleccionarParcela;
 
   const syncCapas = (map: MapLibre) => {
@@ -234,6 +236,28 @@ export default function MapaRotacion({
       if (!map.getLayer('rot-potreros-line')) {
         map.addLayer({ id: 'rot-potreros-line', type: 'line', source: 'rot-potreros', paint: { 'line-color': '#ffffff', 'line-width': 2.5, 'line-opacity': 1 } });
       }
+      // Exclusiones: blanco sólido encima de parcelas/potreros, debajo de
+      // líneas y etiquetas (igual que en los demás mapas, acá sin overlay).
+      const fcExc = { type: 'FeatureCollection', features: d.exclusiones } as FeatureCollection;
+      const exc = map.getSource('rot-exclusiones') as GeoJSONSource | undefined;
+      if (d.exclusiones.length > 0) {
+        if (!map.getLayer('rot-exclusiones-fill')) {
+          if (!exc) map.addSource('rot-exclusiones', { type: 'geojson', data: fcExc });
+          else exc.setData(fcExc);
+          map.addLayer(
+            {
+              id: 'rot-exclusiones-fill', type: 'fill', source: 'rot-exclusiones',
+              paint: { 'fill-color': '#ffffff', 'fill-opacity': 1 },
+            },
+            map.getLayer('rot-potreros-line') ? 'rot-potreros-line' : undefined,
+          );
+        } else {
+          exc?.setData(fcExc);
+        }
+      } else {
+        if (map.getLayer('rot-exclusiones-fill')) map.removeLayer('rot-exclusiones-fill');
+        if (map.getSource('rot-exclusiones')) map.removeSource('rot-exclusiones');
+      }
       if (!map.getLayer('rot-potreros-label')) {
         map.addLayer({
           id: 'rot-potreros-label', type: 'symbol', source: 'rot-potreros',
@@ -299,7 +323,7 @@ export default function MapaRotacion({
       map.once('load', () => syncCapas(map));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [potreros, parcelas, parcelaSeleccionada, status]);
+  }, [potreros, parcelas, parcelaSeleccionada, exclusiones, status]);
 
   useEffect(() => {
     const map = mapRef.current;

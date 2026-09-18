@@ -9,7 +9,7 @@ import {
   PALETA_ROTACION, colorDeRodeoRegistrado, fmtFecha, isoHoy,
 } from '../lib/rotacion';
 import type { MapaRotacionParcelaFeature, SecuenciaPin } from '../components/MapaRotacion';
-import type { PotreroFeature } from '../components/MapaMasaSeca';
+import type { ExclusionOverlayFeature, PotreroFeature } from '../components/MapaMasaSeca';
 
 // Lazy: maplibre solo se carga al ver el mapa de trayectorias.
 const MapaRotacion = lazy(() => import('../components/MapaRotacion'));
@@ -121,6 +121,7 @@ export default function GestionRodeos() {
   const [rotFinca, setRotFinca] = useState('');
   const [rotParcelas, setRotParcelas] = useState<MapaRotacionParcelaFeature[]>([]);
   const [rotPotreros, setRotPotreros] = useState<PotreroFeature[]>([]);
+  const [rotExclusiones, setRotExclusiones] = useState<ExclusionOverlayFeature[]>([]);
   const [estadoActual, setEstadoActual] = useState<Asignacion[]>([]);
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
   const [rotLoading, setRotLoading] = useState(false);
@@ -219,6 +220,7 @@ export default function GestionRodeos() {
     if (!finca) {
       setRotParcelas([]);
       setRotPotreros([]);
+      setRotExclusiones([]);
       return;
     }
     try {
@@ -243,6 +245,16 @@ export default function GestionRodeos() {
         geometry: f.geometry as PotreroFeature['geometry'],
         properties: f.properties,
       })));
+      // No-fatal: sin exclusiones el mapa igual funciona.
+      api.exclusiones(finca)
+        .then((d) => setRotExclusiones(
+          d.features.map((f) => ({
+            type: 'Feature' as const,
+            geometry: f.geometry as ExclusionOverlayFeature['geometry'],
+            properties: { id: f.properties.id, nombre: f.properties.nombre },
+          })),
+        ))
+        .catch(() => setRotExclusiones([]));
     } catch (e) {
       setRotError(e instanceof Error ? e.message : 'Error cargando parcelas');
       setRotParcelas([]);
@@ -1490,6 +1502,7 @@ export default function GestionRodeos() {
                             parcelaSeleccionada={parcelaSel}
                             onSeleccionarParcela={(id) => setParcelaSel(id)}
                             secuencias={secuencias}
+                            exclusiones={rotExclusiones}
                           />
                         </Suspense>
                       </ErrorBoundary>
