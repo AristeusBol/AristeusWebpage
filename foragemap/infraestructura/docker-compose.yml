@@ -23,6 +23,8 @@ services:
       context: ..
       dockerfile: infraestructura/Dockerfile
     container_name: foragemap_api
+    volumes:
+      - ../datos:/app/datos
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-admin_forage}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password_local_123}
