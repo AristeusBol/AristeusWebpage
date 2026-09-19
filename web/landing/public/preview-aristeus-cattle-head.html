@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vista previa - Aristeus cattle head</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #111; padding: 32px; }
+    h1 { font-size: 20px; margin-bottom: 24px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; }
+    .card { border-radius: 12px; padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .card span { font-size: 13px; opacity: 0.8; }
+    .light { background: #ffffff; border: 1px solid #ddd; }
+    .dark { background: #0b2341; color: #fff; }
+    .green { background: #6ba539; }
+    .checker {
+      background-image:
+        linear-gradient(45deg, #ccc 25%, transparent 25%),
+        linear-gradient(-45deg, #ccc 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #ccc 75%),
+        linear-gradient(-45deg, transparent 75%, #ccc 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+      background-color: #fff;
+      border: 1px solid #ddd;
+    }
+    .sizes { display: flex; align-items: flex-end; gap: 16px; margin-top: 32px; }
+    .sizes img { object-fit: contain; }
+  </style>
+</head>
+<body>
+  <h1>Vista previa: Aristeus cattle head (transparencia)</h1>
+  <div class="grid">
+    <div class="card light">
+      <img src="/assets/svg/aristeus-cattle-head.svg" alt="Sobre blanco" width="90" />
+      <span>Fondo blanco</span>
+    </div>
+    <div class="card dark">
+      <img src="/assets/svg/aristeus-cattle-head.svg" alt="Sobre navy" width="90" />
+      <span>Fondo navy (Aristeus)</span>
+    </div>
+    <div class="card green">
+      <img src="/assets/svg/aristeus-cattle-head.svg" alt="Sobre verde" width="90" />
+      <span>Fondo verde (Aristeus)</span>
+    </div>
+    <div class="card checker">
+      <img src="/assets/svg/aristeus-cattle-head.svg" alt="Transparencia" width="90" />
+      <span>Tablero (ver transparencia)</span>
+    </div>
+  </div>
+
+  <h1 style="margin-top:40px;">Tamaños</h1>
+  <div class="sizes">
+    <img src="/assets/svg/aristeus-cattle-head.svg" alt="40px" width="40" />
+    <img src="/assets/svg/aristeus-cattle-head.svg" alt="64px" width="64" />
+    <img src="/assets/svg/aristeus-cattle-head.svg" alt="96px" width="96" />
+    <img src="/assets/svg/aristeus-cattle-head.svg" alt="128px" width="128" />
+  </div>
+
+  <h1 style="margin-top:48px;">Vista previa: Aristeus leaf (transparencia)</h1>
+  <div class="grid">
+    <div class="card light">
+      <img src="/assets/svg/aristeus-leaf.svg" alt="Sobre blanco" width="90" />
+      <span>Fondo blanco</span>
+    </div>
+    <div class="card dark">
+      <img src="/assets/svg/aristeus-leaf.svg" alt="Sobre navy" width="90" />
+      <span>Fondo navy (Aristeus)</span>
+    </div>
+    <div class="card green">
+      <img src="/assets/svg/aristeus-leaf.svg" alt="Sobre verde" width="90" />
+      <span>Fondo verde (Aristeus)</span>
+    </div>
+    <div class="card checker">
+      <img src="/assets/svg/aristeus-leaf.svg" alt="Transparencia" width="90" />
+      <span>Tablero (ver transparencia)</span>
+    </div>
+  </div>
+
+  <div class="sizes">
+    <img src="/assets/svg/aristeus-leaf.svg" alt="40px" width="40" />
+    <img src="/assets/svg/aristeus-leaf.svg" alt="64px" width="64" />
+    <img src="/assets/svg/aristeus-leaf.svg" alt="96px" width="96" />
+    <img src="/assets/svg/aristeus-leaf.svg" alt="128px" width="128" />
+  </div>
+</body>
+</html>

@@ -1,0 +1,100 @@
+---
+import SectionTitle from '../shared/SectionTitle.astro';
+import ScrollReveal from '../animations/ScrollReveal.astro';
+import Icon from '../icons/Icon';
+---
+
+<section class="py-20 md:py-32 bg-bg-primary" id="tecnologia">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <ScrollReveal>
+      <SectionTitle 
+        title="Tecnología de precisión para el campo"
+        align="center"
+        class="mb-16"
+      />
+    </ScrollReveal>
+    
+    <!-- Three columns -->
+    <div class="grid md:grid-cols-3 gap-8 mb-16">
+      <ScrollReveal animation="fade-up" delay={0}>
+        <div class="text-center">
+          <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-aristeus-navy/10 text-aristeus-navy border border-aristeus-navy/10 flex items-center justify-center text-3xl">
+            <Icon name="drone" class="w-6 h-6" client:only="react" />
+          </div>
+          <h3 class="font-heading text-lg font-semibold text-text-primary mb-2">
+            Sensores Multiespectrales y RGB
+          </h3>
+          <p class="text-text-secondary text-sm">
+            Relevamiento aéreo centimétrico adaptado a la velocidad de rebrote y rotación de cada potrero.
+          </p>
+        </div>
+      </ScrollReveal>
+      
+      <ScrollReveal animation="fade-up" delay={150}>
+        <div class="text-center">
+          <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-aristeus-navy/10 text-aristeus-navy border border-aristeus-navy/10 flex items-center justify-center text-3xl">
+            <Icon name="brain" class="w-6 h-6" client:only="react" />
+          </div>
+          <h3 class="font-heading text-lg font-semibold text-text-primary mb-2">
+            Visión Computacional e IA
+          </h3>
+          <p class="text-text-secondary text-sm">
+            Algoritmos avanzados calibrados para estimar biomasa disponible (kg MS/ha) y densidad forrajera.
+          </p>
+        </div>
+      </ScrollReveal>
+      
+      <ScrollReveal animation="fade-up" delay={300}>
+        <div class="text-center">
+          <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-aristeus-navy/10 text-aristeus-navy border border-aristeus-navy/10 flex items-center justify-center text-3xl">
+            <Icon name="chartColumn" class="w-6 h-6" client:only="react" />
+          </div>
+          <h3 class="font-heading text-lg font-semibold text-text-primary mb-2">
+            Modelación de Pastoreo Racional
+          </h3>
+          <p class="text-text-secondary text-sm">
+            Simulación de tasas de crecimiento, balance forrajero y asignación de carga animal en tiempo real.
+          </p>
+        </div>
+      </ScrollReveal>
+    </div>
+    
+    <!-- Pipeline visualization -->
+    <ScrollReveal animation="fade-in">
+      <div class="glass rounded-xl p-8">
+        <div class="flex flex-wrap items-center justify-center gap-4 md:gap-8 text-sm">
+          <div class="flex items-center gap-2">
+            <Icon name="drone" class="w-6 h-6" client:only="react" />
+            <span class="text-text-secondary">Vuelo de Dron</span>
+          </div>
+          <span class="text-border-subtle text-xl">→</span>
+          <div class="flex items-center gap-2">
+            <Icon name="cog" class="w-6 h-6" client:only="react" />
+            <span class="text-text-secondary">Fotogrametría Cloud</span>
+          </div>
+          <span class="text-border-subtle text-xl">→</span>
+          <div class="flex items-center gap-2">
+            <Icon name="brain" class="w-6 h-6" client:only="react" />
+            <span class="text-text-secondary">Algoritmos IA</span>
+          </div>
+          <span class="text-border-subtle text-xl">→</span>
+          <div class="flex items-center gap-2">
+            <Icon name="chartNoAxesCombined" class="w-6 h-6" client:only="react" />
+            <span class="text-text-secondary">Plataforma Web</span>
+          </div>
+          <span class="text-border-subtle text-xl">→</span>
+          <div class="flex items-center gap-2">
+            <Icon name="notebookPen" class="w-6 h-6" client:only="react" />
+            <span class="text-text-secondary">Plan de Pastoreo</span>
+          </div>
+        </div>
+        
+        <div class="mt-6 text-center">
+          <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-aristeus-green/10 text-aristeus-green text-sm">
+            ✅ Algoritmos entrenados con datasets forrajeros internacionales y calibrados en estancias de Bolivia.
+          </span>
+        </div>
+      </div>
+    </ScrollReveal>
+  </div>
+</section>

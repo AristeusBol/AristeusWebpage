@@ -1,0 +1,79 @@
+---
+import SectionTitle from '../shared/SectionTitle.astro';
+import FeatureCard from '../shared/FeatureCard.astro';
+import ContactForm from '../shared/ContactForm.astro';
+import ScrollReveal from '../animations/ScrollReveal.astro';
+import { iconStrings } from '../icons/Icon';
+---
+
+<section class="py-20 md:py-32 bg-bg-secondary">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <ScrollReveal>
+      <div class="text-center mb-16">
+        <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-cv-gold/50 text-cv-gold text-sm font-medium mb-6">
+          <span class="w-2 h-2 rounded-full bg-cv-gold animate-pulse"></span>
+          En desarrollo — Registro para acceso temprano
+        </span>
+        <h2 class="font-heading text-3xl md:text-4xl lg:text-5xl font-bold text-text-primary mb-4">
+          Tecnología de próxima generación para pesaje
+        </h2>
+        <p class="text-text-secondary text-lg max-w-2xl mx-auto">
+          CattleVision está en desarrollo activo. Regístrate para ser de los primeros en probarlo.
+        </p>
+      </div>
+    </ScrollReveal>
+    
+    <div class="grid md:grid-cols-2 gap-6 mb-16">
+      <ScrollReveal animation="fade-up" delay={0}>
+        <FeatureCard 
+          icon="🚁"
+          title="Vuelo autónomo de drones"
+          description="Drones programados para escanear tu ganado automáticamente, siguiendo rutas óptimas de seguridad."
+          accentColor="gold"
+        />
+      </ScrollReveal>
+      
+      <ScrollReveal animation="fade-up" delay={100}>
+        <FeatureCard 
+          icon="📡"
+          title="Escaneo LiDAR 3D"
+          description="Mapeo preciso del volumen corporal del ganado mediante tecnología láser de alta precisión."
+          accentColor="gold"
+        />
+      </ScrollReveal>
+      
+      <ScrollReveal animation="fade-up" delay={200}>
+        <FeatureCard 
+          icon="🤖"
+          title="Modelo de estimación por morfología"
+          description="IA entrenada para correlacionar medidas corporales con peso real, con precisión superior al 95%."
+          accentColor="gold"
+        />
+      </ScrollReveal>
+      
+      <ScrollReveal animation="fade-up" delay={300}>
+        <FeatureCard 
+          icon={iconStrings.chartColumn}
+          title="Dashboard de seguimiento de engorde"
+          description="Visualización de ganancia de peso diaria, proyecciones de faena y detección de animales rezagados."
+          accentColor="gold"
+        />
+      </ScrollReveal>
+    </div>
+    
+    <!-- Early access form -->
+    <ScrollReveal animation="fade-in">
+      <div class="glass rounded-2xl p-8 border border-cv-gold/30 bg-cv-charcoal/20">
+        <div class="max-w-xl mx-auto text-center">
+          <h3 class="font-heading text-2xl font-semibold text-text-primary mb-2">
+            Acceso temprano
+          </h3>
+          <p class="text-text-secondary mb-6">
+            Sé de los primeros en probar Cattle Vision. Sin compromiso.
+          </p>
+          <ContactForm formName="cattlevision-early-access" variant="compact" />
+        </div>
+      </div>
+    </ScrollReveal>
+  </div>
+</section>

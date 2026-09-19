@@ -1,0 +1,46 @@
+---
+import SectionTitle from '../shared/SectionTitle.astro';
+import ScrollReveal from '../animations/ScrollReveal.astro';
+---
+
+<section class="py-20 md:py-32 bg-bg-secondary" id="respaldo">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <ScrollReveal>
+      <SectionTitle 
+        title="Respaldados por"
+        align="center"
+        class="mb-16"
+      />
+    </ScrollReveal>
+    
+    <!-- Logo grid (grayscale placeholders) -->
+    <ScrollReveal animation="fade-in">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+        <div class="glass rounded-xl p-8 flex items-center justify-center grayscale hover:grayscale-0 transition-smooth hover:shadow-lg aspect-[3/2]">
+          <span class="font-heading text-xl text-text-secondary">Incubadora 1</span>
+        </div>
+        <div class="glass rounded-xl p-8 flex items-center justify-center grayscale hover:grayscale-0 transition-smooth hover:shadow-lg aspect-[3/2]">
+          <span class="font-heading text-xl text-text-secondary">Incubadora 2</span>
+        </div>
+        <div class="glass rounded-xl p-8 flex items-center justify-center grayscale hover:grayscale-0 transition-smooth hover:shadow-lg aspect-[3/2]">
+          <span class="font-heading text-xl text-text-secondary">Cliente Piloto</span>
+        </div>
+        <div class="glass rounded-xl p-8 flex items-center justify-center grayscale hover:grayscale-0 transition-smooth hover:shadow-lg aspect-[3/2]">
+          <span class="font-heading text-xl text-text-secondary">Partner Tech</span>
+        </div>
+      </div>
+    </ScrollReveal>
+    
+    <!-- Stats text -->
+    <ScrollReveal animation="fade-up">
+      <div class="text-center">
+        <p class="font-data text-4xl md:text-5xl text-aristeus-green font-semibold mb-2">
+          10,000+
+        </p>
+        <p class="text-text-secondary text-lg">
+          hectáreas analizadas en pilotos
+        </p>
+      </div>
+    </ScrollReveal>
+  </div>
+</section>

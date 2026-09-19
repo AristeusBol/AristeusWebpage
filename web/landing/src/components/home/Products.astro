@@ -1,0 +1,106 @@
+---
+import SectionTitle from '../shared/SectionTitle.astro';
+import Button from '../shared/Button.astro';
+import ScrollReveal from '../animations/ScrollReveal.astro';
+import Icon from '../icons/Icon';
+---
+
+<section class="py-20 md:py-32 bg-bg-primary" id="productos">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <ScrollReveal>
+      <SectionTitle 
+        title="Dos soluciones. Un objetivo: ganadería de precisión basada en datos."
+        align="center"
+        class="mb-16"
+      />
+    </ScrollReveal>
+    
+    <div class="grid md:grid-cols-2 gap-8">
+      <!-- Grass Gauge Card -->
+      <ScrollReveal animation="slide-right">
+        <div class="glass rounded-2xl p-8 border-l-4 border-aristeus-green hover:shadow-[0_0_30px_rgba(107,165,57,0.18)] transition-smooth h-full flex flex-col">
+          <!-- Logo placeholder -->
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-12 h-12 rounded-xl bg-gg-green-dark flex items-center justify-center">
+              <span class="text-white text-2xl">🌿</span>
+            </div>
+            <div>
+              <h3 class="font-heading text-2xl font-bold text-gg-green-light">Grass Gauge</h3>
+              <p class="text-text-secondary text-sm">Planificación de pastoreo</p>
+            </div>
+          </div>
+          
+          <p class="text-text-secondary mb-6 flex-grow">
+            Estimamos biomasa disponible (t MS/ha), calidad forrajera y generamos tu plan de rotación optimizado.
+          </p>
+          
+          <div class="space-y-3 mb-6">
+            <div class="flex items-center gap-3 text-sm">
+              <span class="text-gg-green-mid"><Icon name="drone" class="w-6 h-6" client:only="react" /></span>
+              <span class="text-text-secondary">Relevamiento aéreo de alta resolución por ciclo de pastoreo</span>
+            </div>
+            <div class="flex items-center gap-3 text-sm">
+              <span class="text-gg-green-mid"><Icon name="brain" class="w-6 h-6" client:only="react" /></span>
+              <span class="text-text-secondary">Inteligencia artificial para cálculo de materia seca (t MS/ha)</span>
+            </div>
+            <div class="flex items-center gap-3 text-sm">
+              <span class="text-gg-green-mid"><Icon name="notebookPen" class="w-6 h-6" client:only="react" /></span>
+              <span class="text-text-secondary">Plan de pastoreo listo para ejecutar</span>
+            </div>
+          </div>
+          
+          <div class="flex items-center justify-between pt-4 border-t border-border-subtle">
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gg-green-dark/20 text-gg-green-light text-sm font-medium">
+              <span class="w-2 h-2 rounded-full bg-gg-green-light animate-pulse"></span>
+              ACCESO ANTICIPADO
+            </span>
+            <Button text="Explorar Grass Gauge →" href="/productos#grass-gauge" variant="primary" color="green" size="sm" />
+          </div>
+        </div>
+      </ScrollReveal>
+      
+      <!-- CattleVision Card -->
+      <ScrollReveal animation="slide-left" delay={200}>
+        <div class="glass rounded-2xl p-8 border-l-4 border-cv-gold hover:shadow-[0_0_30px_rgba(53,94,59,0.18)] transition-smooth h-full flex flex-col">
+          <!-- Logo placeholder -->
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-12 h-12 rounded-xl bg-cv-charcoal flex items-center justify-center border border-cv-gold">
+              <span class="text-cv-gold text-2xl">🐂</span>
+            </div>
+            <div>
+              <h3 class="font-heading text-2xl font-bold text-cv-gold">Cattle Vision</h3>
+              <p class="text-text-secondary text-sm">Pesaje con drones</p>
+            </div>
+          </div>
+          
+          <p class="text-text-secondary mb-6 flex-grow">
+            Monitoreamos la ganancia de peso y condición corporal con visión computacional, sin estrés ni pesaje en brete.
+          </p>
+          
+          <div class="space-y-3 mb-6">
+            <div class="flex items-center gap-3 text-sm">
+              <span class="text-cv-gold">🚁</span>
+              <span class="text-text-secondary">Fotogrametría y reconstrucción volumétrica 3D</span>
+            </div>
+            <div class="flex items-center gap-3 text-sm">
+              <span class="text-cv-gold">👁️</span>
+              <span class="text-text-secondary">Modelos biométricos de estimación de peso individual</span>
+            </div>
+            <div class="flex items-center gap-3 text-sm">
+              <span class="text-cv-gold">⚖️</span>
+              <span class="text-text-secondary">Curvas de evolución y ganancia diaria de peso (GDP)</span>
+            </div>
+          </div>
+          
+          <div class="flex items-center justify-between pt-4 border-t border-border-subtle">
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cv-gold/50 text-cv-gold text-sm font-medium">
+              <span class="w-2 h-2 rounded-full bg-cv-gold"></span>
+              PRÓXIMAMENTE
+            </span>
+            <Button text="Conocer Cattle Vision →" href="/productos#cattlevision" variant="outline" color="gold" size="sm" />
+          </div>
+        </div>
+      </ScrollReveal>
+    </div>
+  </div>
+</section>

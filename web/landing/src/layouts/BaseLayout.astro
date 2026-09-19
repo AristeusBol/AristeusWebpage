@@ -1,0 +1,53 @@
+---
+import Nav from '../components/layout/Nav.astro';
+import Footer from '../components/layout/Footer.astro';
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+  lang?: 'es' | 'en';
+}
+
+const { 
+  title, 
+  description = 'Inteligencia artificial para una ganadería más rentable y sostenible. Aristeus - AgTech Boliviana.',
+  lang = 'es'
+} = Astro.props;
+
+const pageTitle = title ? `${title} | Aristeus` : 'Aristeus - Inteligencia Artificial y Machine para Ganadería';
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#F5F7F4" />
+    
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:site_name" content="Aristeus" />
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    
+    <title>{pageTitle}</title>
+  </head>
+  <body class="min-h-screen bg-bg-primary text-text-primary antialiased">
+    <Nav />
+    
+    <main class="pt-16 md:pt-20">
+      <slot />
+    </main>
+    
+    <Footer />
+  </body>
+</html>

@@ -1,0 +1,17 @@
+:root {
+  --color-primary: #0B2341;
+  --color-accent: #6BA539;
+  --color-secondary: #355E3B;
+  --color-text: #2B2F36;
+  --color-bg: #F5F7F4;
+  --color-border: #D8DEE3;
+
+  --color-heading: #0B2341;
+  --color-link: #0B2341;
+  --color-link-hover: #355E3B;
+
+  --color-button-primary-bg: #0B2341;
+  --color-button-primary-text: #F5F7F4;
+  --color-button-secondary-bg: #6BA539;
+  --color-button-secondary-text: #F5F7F4;
+}

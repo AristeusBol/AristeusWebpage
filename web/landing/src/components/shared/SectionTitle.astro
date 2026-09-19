@@ -1,0 +1,32 @@
+---
+interface Props {
+  title: string;
+  subtitle?: string;
+  align?: 'center' | 'left';
+  class?: string;
+}
+
+const { title, subtitle, align = 'center', class: className = '' } = Astro.props;
+
+const alignStyles = {
+  center: 'text-center items-center',
+  left: 'text-left items-start'
+};
+
+const lineAlign = {
+  center: 'mx-auto',
+  left: 'mr-auto'
+};
+---
+
+<div class={`flex flex-col gap-3 ${alignStyles[align]} ${className}`}>
+  <h2 class="font-heading text-3xl md:text-4xl lg:text-5xl font-semibold text-text-primary leading-tight">
+    {title}
+  </h2>
+  <div class={`w-16 h-1 bg-aristeus-green rounded-full ${lineAlign[align]}`}></div>
+  {subtitle && (
+    <p class="text-text-secondary text-lg md:text-xl max-w-2xl mt-2">
+      {subtitle}
+    </p>
+  )}
+</div>

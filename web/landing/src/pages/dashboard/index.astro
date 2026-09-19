@@ -1,0 +1,202 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import LoginForm from '../../components/auth/LoginForm.tsx';
+
+// URL de la app real de Grass Gauge.
+// En producción se configura con la variable PUBLIC_GRASSGAUGE_URL.
+const grassGaugeUrl = import.meta.env.PUBLIC_GRASSGAUGE_URL ?? '/app/mapa';
+---
+
+<BaseLayout title="Mi panel" description="Panel principal de Aristeus">
+  <section class="py-20 md:py-32 bg-bg-primary min-h-[80vh]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div id="dashboard-loading" class="text-center py-12">
+        <p class="text-text-secondary">Cargando tu panel...</p>
+      </div>
+
+      <div id="dashboard-content" class="hidden">
+        <div class="text-center mb-10">
+          <p class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-aristeus-green/10 border border-aristeus-green/20 text-aristeus-secondary text-xs font-semibold tracking-wide mb-4">
+            <span class="w-2 h-2 rounded-full bg-aristeus-green animate-pulse"></span>
+            PANEL DEL PRODUCTOR
+          </p>
+          <h1 class="font-heading text-4xl md:text-5xl font-bold text-text-primary mb-3">
+            ¡Bienvenido a Aristeus!
+          </h1>
+          <p class="text-text-secondary text-lg mb-5">
+            Hola, <span id="user-name" class="font-semibold text-aristeus-green"></span> — este es tu centro de operaciones.
+          </p>
+
+          <div id="welcome-message" class="hidden mb-6 max-w-xl mx-auto">
+            <div class="bg-aristeus-green/10 border border-aristeus-green/20 rounded-xl p-4">
+              <p class="text-aristeus-green font-medium">🎉 Tu cuenta fue creada exitosamente</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-end justify-between mb-6 max-w-6xl mx-auto">
+          <div>
+            <h2 class="font-heading text-2xl md:text-3xl font-bold text-text-primary">
+              Mis productos
+            </h2>
+            <p class="text-text-secondary text-sm mt-1">Tus soluciones activas y en camino, en un solo lugar.</p>
+          </div>
+          <span class="hidden sm:inline-flex font-data text-xs text-text-secondary bg-bg-card border border-border-subtle rounded-full px-3 py-1">3 productos</span>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto items-stretch">
+          <!-- PRODUCTO 1: Grass Gauge → app real -->
+          <a id="producto-grass-gauge" href={grassGaugeUrl} data-app-url={grassGaugeUrl} class="group relative glass rounded-2xl overflow-hidden hover-glow-green transition-smooth hover:-translate-y-1 flex flex-col">
+            <div class="h-1.5 bg-gg-gradient"></div>
+            <div class="p-7 flex flex-col flex-grow">
+              <div class="mb-5">
+                <div class="w-12 h-12 rounded-xl bg-gg-gradient flex items-center justify-center text-white text-2xl shadow-md">🌿</div>
+              </div>
+              <h3 class="font-heading text-xl font-bold text-text-primary">Grass Gauge</h3>
+              <p class="text-aristeus-secondary text-xs font-semibold mt-0.5 mb-3">Planificación de pastoreo con visión computacional</p>
+              <p class="text-text-primary/70 text-sm leading-relaxed mb-4">Estimamos biomasa disponible (t MS/ha), calidad forrajera y generamos tu plan de rotación optimizado.</p>
+              <div class="flex items-center gap-2 rounded-xl bg-bg-primary/60 border border-border-subtle px-4 py-3 mb-5">
+                <span id="gg-status-dot" class="w-2 h-2 rounded-full bg-text-secondary/40"></span>
+                <p id="gg-status-text" class="text-text-secondary text-xs font-semibold">Verificando estado de la app…</p>
+              </div>
+              <div class="flex items-center justify-between mt-auto pt-4 border-t border-border-subtle">
+                <span class="font-data text-[11px] text-text-secondary">GG-01 · ACTIVO</span>
+                <span class="text-sm font-semibold text-aristeus-green group-hover:text-aristeus-secondary transition-smooth">Abrir app →</span>
+              </div>
+            </div>
+          </a>
+
+          <!-- PRODUCTO 2: CattleVision → página de productos (sin app todavía) -->
+          <a id="producto-cattlevision" href="/productos#cattlevision" class="group relative glass rounded-2xl overflow-hidden hover-glow-gold transition-smooth hover:-translate-y-1 flex flex-col">
+            <div class="h-1.5 bg-cv-gradient"></div>
+            <div class="p-7 flex flex-col flex-grow">
+              <div class="mb-5">
+                <div class="w-12 h-12 rounded-xl bg-cv-charcoal border border-cv-gold/50 flex items-center justify-center text-2xl shadow-md">🐂</div>
+              </div>
+              <h3 class="font-heading text-xl font-bold text-text-primary">CattleVision</h3>
+              <p class="text-aristeus-secondary text-xs font-semibold mt-0.5 mb-3">Pesaje de ganado con drones y visión artificial</p>
+              <p class="text-text-primary/70 text-sm leading-relaxed mb-4">Monitoreamos la ganancia de peso y condición corporal con visión computacional, sin estrés ni pesaje en brete.</p>
+              <div class="flex items-center gap-2 rounded-xl bg-bg-primary/60 border border-border-subtle px-4 py-3 mb-5">
+                <span class="w-2 h-2 rounded-full bg-cv-gold"></span>
+                <p class="text-text-secondary text-xs font-semibold">En desarrollo — acceso temprano</p>
+              </div>
+              <div class="flex items-center justify-between mt-auto pt-4 border-t border-border-subtle">
+                <span class="font-data text-[11px] text-text-secondary">CV-02 · BETA</span>
+                <span class="text-sm font-semibold text-aristeus-green group-hover:text-aristeus-secondary transition-smooth">Ver detalle →</span>
+              </div>
+            </div>
+          </a>
+
+          <!-- PRODUCTO 3: placeholder → página de productos -->
+          <a id="producto-3" href="/productos" class="group relative glass rounded-2xl overflow-hidden transition-smooth hover:-translate-y-1 hover:shadow-xl flex flex-col">
+            <div class="h-1.5 bg-gradient-to-r from-aristeus-navy to-aristeus-green"></div>
+            <div class="p-7 flex flex-col flex-grow">
+              <div class="mb-5">
+                <div class="w-12 h-12 rounded-xl bg-aristeus-navy flex items-center justify-center text-white text-2xl shadow-md">✨</div>
+              </div>
+              <h3 class="font-heading text-xl font-bold text-text-primary">Producto 3</h3>
+              <p class="text-aristeus-secondary text-xs font-semibold mt-0.5 mb-3">Nueva solución Aristeus</p>
+              <p class="text-text-primary/70 text-sm leading-relaxed mb-4">Información próximamente.</p>
+              <div class="flex items-center gap-2 rounded-xl bg-bg-primary/60 border border-border-subtle px-4 py-3 mb-5">
+                <span class="w-2 h-2 rounded-full bg-text-secondary/40"></span>
+                <p class="text-text-secondary text-xs font-semibold">Por definir</p>
+              </div>
+              <div class="flex items-center justify-between mt-auto pt-4 border-t border-border-subtle">
+                <span class="font-data text-[11px] text-text-secondary">AR-03 · PRONTO</span>
+                <span class="text-sm font-semibold text-aristeus-green group-hover:text-aristeus-secondary transition-smooth">Ver productos →</span>
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <div id="dashboard-login" class="hidden">
+        <div class="text-center mb-8">
+          <h1 class="font-heading text-3xl md:text-4xl font-bold text-text-primary mb-4">
+            Mi panel
+          </h1>
+          <p class="text-text-secondary text-lg">
+            Iniciá sesión para acceder a tu planificación
+          </p>
+          <div id="session-expired" class="hidden mt-4 max-w-md mx-auto">
+            <div class="bg-aristeus-navy/10 border border-aristeus-navy/20 rounded-xl p-4">
+              <p class="text-aristeus-navy text-sm font-medium">Tu sesión expiró. Iniciá sesión de nuevo.</p>
+            </div>
+          </div>
+        </div>
+        <LoginForm client:only="react" />
+      </div>
+    </div>
+  </section>
+
+  <script>
+    import { validateSession, getCurrentUser } from '../../utils/auth';
+
+    const loadingEl = document.getElementById('dashboard-loading');
+    const contentEl = document.getElementById('dashboard-content');
+    const loginEl = document.getElementById('dashboard-login');
+
+    function showLogin(expired) {
+      loadingEl?.classList.add('hidden');
+      loginEl?.classList.remove('hidden');
+      if (expired) {
+        document.getElementById('session-expired')?.classList.remove('hidden');
+      }
+    }
+
+    async function initDashboard() {
+      const user = getCurrentUser();
+      if (!user) {
+        showLogin(false);
+        return;
+      }
+      // Validar token contra la API (detecta expirados/revocados)
+      const ok = await validateSession();
+      if (!ok) {
+        showLogin(true);
+        return;
+      }
+      const nameEl = document.getElementById('user-name');
+      if (nameEl) nameEl.textContent = user.name || 'Usuario';
+      loadingEl?.classList.add('hidden');
+      contentEl?.classList.remove('hidden');
+    }
+
+    initDashboard();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('welcome') === '1') {
+      const welcomeEl = document.getElementById('welcome-message');
+      if (welcomeEl) welcomeEl.classList.remove('hidden');
+    }
+
+    // Estado en vivo de la app Grass Gauge
+    (async () => {
+      const dot = document.getElementById('gg-status-dot');
+      const text = document.getElementById('gg-status-text');
+      const card = document.getElementById('producto-grass-gauge');
+      if (!dot || !text || !card) return;
+      const appUrl = card.getAttribute('data-app-url') || '';
+      let target = '';
+      try {
+        target = new URL(appUrl, window.location.href).href;
+      } catch {
+        text.textContent = 'URL de la app no configurada';
+        return;
+      }
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 4000);
+        await fetch(target, { mode: 'no-cors', signal: controller.signal });
+        clearTimeout(timeout);
+        dot.classList.remove('bg-text-secondary/40');
+        dot.classList.add('bg-aristeus-green', 'animate-pulse');
+        text.textContent = 'Aplicación en línea';
+      } catch {
+        dot.classList.remove('bg-text-secondary/40');
+        dot.classList.add('bg-red-500');
+        text.textContent = 'Aplicación fuera de línea';
+      }
+    })();
+  </script>
+</BaseLayout>

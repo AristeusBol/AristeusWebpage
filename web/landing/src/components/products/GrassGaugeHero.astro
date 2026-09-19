@@ -1,0 +1,61 @@
+---
+import Button from '../shared/Button.astro';
+import ScrollReveal from '../animations/ScrollReveal.astro';
+---
+
+<section class="relative min-h-[70vh] flex items-center overflow-hidden" id="grass-gauge">
+  <!-- Background -->
+  <div class="absolute inset-0">
+    <img 
+      src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1920&q=80" 
+      alt="Grassland pasture"
+      class="w-full h-full object-cover"
+    />
+    <div class="absolute inset-0 bg-gradient-to-r from-gg-green-dark/90 via-gg-green-dark/70 to-transparent"></div>
+  </div>
+  
+  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+    <div class="grid lg:grid-cols-2 gap-12 items-center">
+      <ScrollReveal animation="slide-right">
+        <div class="flex items-center gap-4 mb-6">
+          <div class="w-16 h-16 rounded-2xl bg-white flex items-center justify-center shadow-lg">
+            <span class="text-3xl">🌿</span>
+          </div>
+          <div>
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-white text-sm font-medium">
+              <span class="w-2 h-2 rounded-full bg-gg-green-light animate-pulse"></span>
+              ACCESO ANTICIPADO
+            </span>
+          </div>
+        </div>
+        
+        <h1 class="font-heading text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+          Grass Gauge
+          <span class="block text-gg-green-light">Sabe exactamente cuánto pasto tienes</span>
+        </h1>
+        
+        <p class="text-white/80 text-lg md:text-xl mb-8 max-w-xl">
+          Medimos la biomasa de tus potreros con alta precisión para que optimices cada rotación.
+        </p>
+        
+        <Button 
+          text="Prueba Grass Gauge en tu campo" 
+          href="/contacto" 
+          variant="primary" 
+          color="white" 
+          size="lg"
+        />
+      </ScrollReveal>
+      
+      <ScrollReveal animation="fade-in" delay={300}>
+        <div class="glass rounded-2xl p-6 bg-white/10 backdrop-blur-xl border-white/20">
+          <img 
+            src="https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=600&q=80" 
+            alt="Grass Gauge Dashboard"
+            class="w-full rounded-xl shadow-2xl"
+          />
+        </div>
+      </ScrollReveal>
+    </div>
+  </div>
+</section>

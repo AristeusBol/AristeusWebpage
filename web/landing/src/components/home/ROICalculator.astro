@@ -1,0 +1,165 @@
+---
+import ScrollReveal from '../animations/ScrollReveal.astro';
+---
+
+<section class="roi-section py-20 md:py-32 bg-bg-secondary" id="calculadora-roi">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <ScrollReveal>
+      <div class="section-header text-center mb-16">
+        <h2 class="font-heading text-3xl md:text-4xl font-bold text-text-primary mb-4">
+          Resultados que impactan tu operación
+        </h2>
+        <div class="mx-auto mb-6" aria-hidden="true" style="width: 64px; height: 4px; background: linear-gradient(to right, #6ba54a, #0b2341); border-radius: 9999px;"></div>
+        <p class="text-text-secondary text-lg max-w-3xl mx-auto">
+          Proyecciones basadas en modelos de pastoreo de precisión validados en el oriente boliviano.
+        </p>
+      </div>
+    </ScrollReveal>
+
+    <ScrollReveal animation="fade-up">
+      <div class="kpi-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <div class="glass rounded-2xl p-6 text-center border border-border-subtle">
+          <span class="kpi-value block font-data text-4xl font-bold text-aristeus-green mb-2">+50%</span>
+          <span class="kpi-label text-text-secondary text-sm">aumento en capacidad de carga</span>
+        </div>
+        <div class="glass rounded-2xl p-6 text-center border border-border-subtle">
+          <span class="kpi-value block font-data text-4xl font-bold text-aristeus-green mb-2">+54.75 kg</span>
+          <span class="kpi-label text-text-secondary text-sm">carne extra por animal al año</span>
+        </div>
+        <div class="glass rounded-2xl p-6 text-center border border-border-subtle">
+          <span class="kpi-value block font-data text-4xl font-bold text-aristeus-green mb-2">8 a 10 años</span>
+          <span class="kpi-label text-text-secondary text-sm">más de vida útil de pasturas</span>
+        </div>
+        <div class="glass rounded-2xl p-6 text-center border border-border-subtle">
+          <span class="kpi-value block font-data text-4xl font-bold text-aristeus-green mb-2">&lt; 12 meses</span>
+          <span class="kpi-label text-text-secondary text-sm">retorno estimado (Payback)</span>
+        </div>
+      </div>
+    </ScrollReveal>
+
+    <ScrollReveal animation="fade-up" delay={200}>
+      <div class="calculator-card glass rounded-2xl p-8 md:p-10 border border-border-subtle">
+        <div class="calculator-input-group mb-10">
+          <label for="hectareasInput" class="input-label block font-heading text-lg font-semibold text-text-primary mb-3">
+            Ingresa la superficie de tu estancia (Hectáreas):
+          </label>
+          <div class="input-wrapper relative max-w-md">
+            <input
+              type="number"
+              id="hectareasInput"
+              class="calculator-input w-full px-4 py-3 pr-16 rounded-xl bg-bg-primary border border-border-subtle text-text-primary font-data text-lg focus:outline-none focus:ring-2 focus:ring-aristeus-green/50 focus:border-aristeus-green transition-smooth"
+              value="500"
+              min="50"
+              max="20000"
+              step="50"
+              aria-label="Superficie en hectáreas"
+            />
+            <span class="input-unit absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary font-medium">ha</span>
+          </div>
+        </div>
+
+        <div class="calculator-results-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div class="result-box rounded-xl p-6 bg-bg-primary/60 border border-border-subtle">
+            <span class="result-title block text-text-secondary text-sm mb-2">Hato Estimado</span>
+            <span class="result-number block font-data text-3xl font-bold text-text-primary mb-1" id="lblHato">500</span>
+            <span class="result-unit text-text-secondary text-xs">cabezas (1.0 UA/ha)</span>
+          </div>
+
+          <div class="result-box rounded-xl p-6 bg-bg-primary/60 border border-border-subtle">
+            <span class="result-title block text-text-secondary text-sm mb-2">Producción Cárnica Extra</span>
+            <span class="result-number block font-data text-3xl font-bold text-aristeus-green mb-1" id="lblCarneExtra">27,375</span>
+            <span class="result-unit text-text-secondary text-xs">kg carne viva / año</span>
+          </div>
+
+          <div class="result-box rounded-xl p-6 bg-bg-primary/60 border border-border-subtle">
+            <span class="result-title block text-text-secondary text-sm mb-2">Ahorro Reducción Mortalidad</span>
+            <span class="result-number block font-data text-3xl font-bold text-aristeus-green mb-1" id="lblMortalidad">$8,400</span>
+            <span class="result-unit text-text-secondary text-xs">USD / año (2% hato salvado)</span>
+          </div>
+
+          <div class="result-box highlight-box rounded-xl p-6 bg-aristeus-navy/5 border-2 border-aristeus-green/30">
+            <span class="result-title block text-text-secondary text-sm mb-2">Generación de Valor Bruto Total</span>
+            <span class="result-number-large block font-data text-4xl font-bold text-aristeus-green mb-1" id="lblBeneficioBruto">$74,100</span>
+            <span class="result-note block text-text-secondary text-xs mb-1">USD / año a régimen pleno (100%)</span>
+            <div class="result-subdetail text-text-secondary text-sm mb-2">
+              <span>Costo SaaS Aristeus: </span>
+              <strong class="text-text-primary" id="lblCostoSaaS">$4,836 USD</strong>
+            </div>
+            <div class="result-subdetail text-text-secondary text-sm mb-2">
+              <span>Beneficio Neto Total: </span>
+              <strong class="text-aristeus-green" id="lblBeneficioNeto">$69,264 USD</strong>
+            </div>
+            <div class="result-subdetail text-text-secondary text-sm">
+              <span>Año 1 (Castigado 60% eficiencia): </span>
+              <strong class="text-text-primary" id="lblAno1">$47,820 USD</strong>
+            </div>
+            <div class="result-subdetail text-text-secondary text-sm mt-1">
+              <span>Beneficio Neto Año 1: </span>
+              <strong class="text-aristeus-green" id="lblBeneficioNetoY1">$42,984 USD</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ScrollReveal>
+  </div>
+</section>
+
+<script>
+  (function() {
+    const inputHa = document.getElementById("hectareasInput");
+    const lblHato = document.getElementById("lblHato");
+    const lblCarneExtra = document.getElementById("lblCarneExtra");
+    const lblMortalidad = document.getElementById("lblMortalidad");
+    const lblBeneficioBruto = document.getElementById("lblBeneficioBruto");
+    const lblAno1 = document.getElementById("lblAno1");
+    const lblCostoSaaS = document.getElementById("lblCostoSaaS");
+    const lblBeneficioNeto = document.getElementById("lblBeneficioNeto");
+    const lblBeneficioNetoY1 = document.getElementById("lblBeneficioNetoY1");
+
+    const CARGA_BASE = 1.0;
+    const DELTA_KG_ANUAL = 54.75;
+    const PRECIO_KG = 2.40;
+    const TASA_MORT_SALVADA = 0.02;
+    const PESO_NOVILLO = 350;
+    const EFICIENCIA_Y1 = 0.60;
+    const COSTO_SAAS_BASE = 4836;
+
+    function formatearNumero(num) {
+      return new Intl.NumberFormat("es-BO", { maximumFractionDigits: 0 }).format(num);
+    }
+
+    function formatearMoneda(num) {
+      return "$" + new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(num);
+    }
+
+    function actualizarCalculadora() {
+      let ha = parseFloat(inputHa.value);
+      if (isNaN(ha) || ha <= 0) {
+        ha = 0;
+      }
+
+      const cabezas = ha * CARGA_BASE;
+      const carneExtraKg = cabezas * DELTA_KG_ANUAL;
+      const ingresoCarne = carneExtraKg * PRECIO_KG;
+      const ahorroMortalidad = cabezas * TASA_MORT_SALVADA * PESO_NOVILLO * PRECIO_KG;
+      const beneficioBrutoTotal = ingresoCarne + ahorroMortalidad;
+      const beneficioAno1 = (ingresoCarne * EFICIENCIA_Y1) + ahorroMortalidad;
+      const beneficioNetoTotal = beneficioBrutoTotal - COSTO_SAAS_BASE;
+      const beneficioNetoY1 = beneficioAno1 - COSTO_SAAS_BASE;
+
+      lblHato.textContent = formatearNumero(cabezas);
+      lblCarneExtra.textContent = formatearNumero(carneExtraKg);
+      lblMortalidad.textContent = formatearMoneda(ahorroMortalidad);
+      lblBeneficioBruto.textContent = formatearMoneda(beneficioBrutoTotal);
+      lblCostoSaaS.textContent = formatearMoneda(COSTO_SAAS_BASE) + " USD";
+      lblBeneficioNeto.textContent = formatearMoneda(beneficioNetoTotal) + " USD";
+      lblAno1.textContent = formatearMoneda(beneficioAno1) + " USD";
+      lblBeneficioNetoY1.textContent = formatearMoneda(beneficioNetoY1) + " USD";
+    }
+
+    inputHa.addEventListener("input", actualizarCalculadora);
+    inputHa.addEventListener("change", actualizarCalculadora);
+
+    actualizarCalculadora();
+  })();
+</script>

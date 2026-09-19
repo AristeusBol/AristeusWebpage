@@ -1,0 +1,35 @@
+---
+interface Props {
+  icon: string;
+  title: string;
+  description: string;
+  accentColor?: 'green' | 'gold' | 'navy';
+  class?: string;
+}
+
+const { icon, title, description, accentColor = 'green', class: className = '' } = Astro.props;
+
+const accentStyles = {
+  green: 'hover:border-aristeus-green hover:shadow-[0_0_20px_rgba(107,165,57,0.26)]',
+  gold: 'hover:border-cv-gold hover:shadow-[0_0_20px_rgba(53,94,59,0.24)]',
+  navy: 'hover:border-aristeus-navy hover:shadow-[0_0_20px_rgba(11,35,65,0.22)]'
+};
+
+const iconColors = {
+  green: 'text-aristeus-green',
+  gold: 'text-cv-gold',
+  navy: 'text-aristeus-navy'
+};
+---
+
+<div class={`glass p-6 rounded-xl transition-smooth ${accentStyles[accentColor]} ${className}`}>
+  <div class={`text-3xl mb-4 ${iconColors[accentColor]}`}>
+    <Fragment set:html={icon} />
+  </div>
+  <h3 class="font-heading text-xl font-semibold text-text-primary mb-2">
+    {title}
+  </h3>
+  <p class="text-text-secondary text-sm leading-relaxed">
+    {description}
+  </p>
+</div>

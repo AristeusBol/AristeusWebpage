@@ -1,0 +1,190 @@
+---
+import Icon from '../icons/Icon';
+
+interface Props {
+  class?: string;
+}
+
+const { class: className = '' } = Astro.props;
+
+const navLinks = [
+  { href: '/', label: 'Inicio', labelEn: 'Home' },
+  { href: '/productos', label: 'Productos', labelEn: 'Products' },
+  { href: '/nosotros', label: 'Nosotros', labelEn: 'About' },
+  { href: '/contacto', label: 'Contacto', labelEn: 'Contact' },
+];
+---
+
+<nav class={`fixed top-0 left-0 right-0 z-50 glass border-b border-border-subtle shadow-[0_10px_30px_rgba(11,35,65,0.06)] ${className}`}>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16 md:h-20">
+      <!-- Logo -->
+      <a href="/" class="flex items-center gap-3 group">
+        <img src="/images/logos/AristeusTransparente.png" alt="Aristeus" class="w-10 h-10 object-contain group-hover:brightness-110 transition-smooth" />
+        <span class="font-heading font-semibold text-xl text-text-primary hidden sm:block">
+          Aristeus
+        </span>
+      </a>
+
+      <!-- Desktop Navigation -->
+      <div class="hidden md:flex items-center gap-8">
+        {navLinks.map(link => (
+          <a 
+            href={link.href} 
+            class="text-text-secondary hover:text-text-primary font-medium transition-smooth text-sm"
+          >
+            {link.label}
+          </a>
+        ))}
+      </div>
+
+      <!-- Right side: Auth -->
+      <div class="hidden md:flex items-center gap-4">
+        <!-- Auth state: rendered by JS -->
+        <div id="auth-desktop" class="flex items-center gap-3">
+          <a href="/login" id="nav-login-desktop" class="text-text-secondary hover:text-text-primary font-medium transition-smooth text-sm">
+            Iniciar sesión
+          </a>
+          <a href="/register" id="nav-register-desktop" class="px-4 py-2 rounded-lg bg-aristeus-green text-text-inverse text-sm font-medium hover:bg-aristeus-secondary transition-smooth">
+            Registrarse
+          </a>
+        </div>
+        
+        <div id="nav-user-desktop" class="hidden items-center gap-3">
+          <a href="/dashboard" class="text-text-secondary hover:text-text-primary font-medium transition-smooth text-sm">
+            Mi panel
+          </a>
+          <button id="nav-logout-desktop" class="px-4 py-2 rounded-lg border border-border-subtle text-text-primary text-sm font-medium hover:bg-bg-secondary transition-smooth">
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile menu button -->
+      <button 
+        id="mobile-menu-btn" 
+        class="md:hidden p-2 text-text-primary hover:text-aristeus-green transition-smooth"
+        aria-label="Toggle menu"
+      >
+        <span id="menu-icon"><Icon name="menu" class="w-6 h-6" client:only="react" /></span>
+        <span id="close-icon" class="hidden"><Icon name="x" class="w-6 h-6" client:only="react" /></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile menu -->
+  <div id="mobile-menu" class="hidden md:hidden border-t border-border-subtle bg-bg-card">
+    <div class="px-4 py-4 space-y-3">
+      {navLinks.map(link => (
+        <a 
+          href={link.href} 
+          class="block text-text-secondary hover:text-text-primary font-medium py-2 transition-smooth"
+        >
+          {link.label}
+        </a>
+      ))}
+      <div class="pt-3 border-t border-border-subtle flex items-center justify-end">
+        <!-- Mobile auth -->
+        <div id="auth-mobile" class="flex items-center gap-2">
+          <a href="/login" id="nav-login-mobile" class="text-text-secondary hover:text-text-primary font-medium text-sm">
+            Iniciar sesión
+          </a>
+          <a href="/register" id="nav-register-mobile" class="px-3 py-1.5 rounded-lg bg-aristeus-green text-text-inverse text-sm font-medium hover:bg-aristeus-secondary transition-smooth">
+            Registrarse
+          </a>
+        </div>
+        
+        <div id="nav-user-mobile" class="hidden items-center gap-2">
+          <a href="/dashboard" class="text-text-secondary hover:text-text-primary font-medium text-sm">
+            Mi panel
+          </a>
+          <button id="nav-logout-mobile" class="px-3 py-1.5 rounded-lg border border-border-subtle text-text-primary text-sm font-medium hover:bg-bg-secondary transition-smooth">
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<script>
+  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+  const mobileMenu = document.getElementById('mobile-menu');
+  const menuIcon = document.getElementById('menu-icon');
+  const closeIcon = document.getElementById('close-icon');
+
+  if (mobileMenuBtn && mobileMenu) {
+    mobileMenuBtn.addEventListener('click', () => {
+      mobileMenu.classList.toggle('hidden');
+      menuIcon?.classList.toggle('hidden');
+      closeIcon?.classList.toggle('hidden');
+    });
+
+    // Close menu when clicking a link
+    mobileMenu.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        mobileMenu.classList.add('hidden');
+        menuIcon?.classList.remove('hidden');
+        closeIcon?.classList.add('hidden');
+      });
+    });
+  }
+
+  // Auth state (sesión GrassGauge compartida con el panel)
+  // Lee la key nueva con fallback a la anterior (ForageMap) para migrar sesiones.
+  function getSessionToken() {
+    const token = localStorage.getItem('grassgauge_token') ?? localStorage.getItem('foragemap_token');
+    if (token && !localStorage.getItem('grassgauge_token')) {
+      localStorage.setItem('grassgauge_token', token);
+      localStorage.removeItem('foragemap_token');
+    }
+    return token;
+  }
+  function clearSession() {
+    localStorage.removeItem('grassgauge_token');
+    localStorage.removeItem('grassgauge_user');
+    localStorage.removeItem('foragemap_token');
+    localStorage.removeItem('foragemap_user');
+  }
+  function updateAuthUI() {
+    const session = getSessionToken();
+    const isAuth = !!session;
+    
+    const authDesktop = document.getElementById('auth-desktop');
+    const userDesktop = document.getElementById('nav-user-desktop');
+    const authMobile = document.getElementById('auth-mobile');
+    const userMobile = document.getElementById('nav-user-mobile');
+    
+    if (isAuth) {
+      authDesktop?.classList.add('hidden');
+      userDesktop?.classList.remove('hidden');
+      userDesktop?.classList.add('flex');
+      authMobile?.classList.add('hidden');
+      userMobile?.classList.remove('hidden');
+      userMobile?.classList.add('flex');
+    } else {
+      authDesktop?.classList.remove('hidden');
+      userDesktop?.classList.add('hidden');
+      userDesktop?.classList.remove('flex');
+      authMobile?.classList.remove('hidden');
+      userMobile?.classList.add('hidden');
+      userMobile?.classList.remove('flex');
+    }
+  }
+
+  // Logout handlers
+  document.getElementById('nav-logout-desktop')?.addEventListener('click', () => {
+    clearSession();
+    updateAuthUI();
+    window.location.href = '/';
+  });
+
+  document.getElementById('nav-logout-mobile')?.addEventListener('click', () => {
+    clearSession();
+    updateAuthUI();
+    window.location.href = '/';
+  });
+
+  // Initial state
+  updateAuthUI();
+</script>
