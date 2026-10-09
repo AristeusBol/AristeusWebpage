@@ -6,6 +6,7 @@ import {
 } from 'maplibre-gl';
 import type { Position } from 'geojson';
 import { getToken, type TipoDensidad } from './api';
+import { uiPalette } from '../hooks/useUiPalette';
 
 export type BBox = [[number, number], [number, number]];
 
@@ -72,7 +73,7 @@ export function buildStyleEsri(): StyleSpecification {
       'esri-sat': { type: 'raster', tiles: ESRI_TILES, tileSize: 256, maxzoom: 19, attribution: ESRI_ATTR },
     },
     layers: [
-      { id: 'bg', type: 'background', paint: { 'background-color': '#0b1f0b' } },
+      { id: 'bg', type: 'background', paint: { 'background-color': uiPalette().mapBg } },
       { id: 'satelite', type: 'raster', source: 'esri-sat', paint: { 'raster-opacity': 1 } },
     ],
   };

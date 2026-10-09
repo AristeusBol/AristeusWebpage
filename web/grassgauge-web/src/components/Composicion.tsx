@@ -37,6 +37,10 @@ export default function Composicion({ lote, lotes }: Props) {
   const fmt0 = (v: number) => v.toLocaleString('es-AR', { maximumFractionDigits: 0 });
   const fmt2 = (v: number) => v.toLocaleString('es-AR', { maximumFractionDigits: 2 });
 
+  const colVerde: React.CSSProperties = { color: 'var(--densidad-verde)' };
+  const colMuerta: React.CSSProperties = { color: 'var(--densidad-muerta)' };
+  const colTotal: React.CSSProperties = { color: 'var(--densidad-total)' };
+
   return (
     <div className="comp-strip">
       <strong className="comp-strip-title">{titulo} <span className="comp-arrow">→</span></strong>
@@ -46,11 +50,11 @@ export default function Composicion({ lote, lotes }: Props) {
         <div className="comp-strip-vals">
           <span><em>Área:</em> {fmt2(comp.area)} ha</span>
           <span className="sep">·</span>
-          <span><em>Verde:</em> <span style={{ color: '#059669' }}>{fmt1(comp.verde)} t/ha</span> <small>({fmt0(comp.pctVerde)}%)</small></span>
+          <span><em>Verde:</em> <span style={colVerde}>{fmt1(comp.verde)} t/ha</span> <small>({fmt0(comp.pctVerde)}%)</small></span>
           <span className="sep">·</span>
-          <span><em>Muerta:</em> <span style={{ color: '#78350f' }}>{fmt1(comp.muerta)} t/ha</span> <small>({fmt0(comp.pctMuerta)}%)</small></span>
+          <span><em>Muerta:</em> <span style={colMuerta}>{fmt1(comp.muerta)} t/ha</span> <small>({fmt0(comp.pctMuerta)}%)</small></span>
           <span className="sep">·</span>
-          <span><em>Total:</em> <span style={{ color: '#111827' }}>{fmt1(comp.total)} t/ha</span></span>
+          <span><em>Total:</em> <span style={colTotal}>{fmt1(comp.total)} t/ha</span></span>
         </div>
       )}
     </div>

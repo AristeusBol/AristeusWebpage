@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { api, type PotreroItem, type SeriePunto } from '../lib/api';
 import { fmtFechaCorta, paradasDegradado } from '../lib/masaSeca';
 import { ESTADOS, niceTicks } from '../lib/zonas';
+import { useDataPalette } from '../hooks/useDataPalette';
+import { useUiPalette } from '../hooks/useUiPalette';
 
 interface Props {
   finca: string;
@@ -13,9 +15,9 @@ interface Props {
 }
 
 const SERIES = [
-  { id: 'verde', label: 'Verde', color: '#10b981' },
-  { id: 'muerta', label: 'Muerta', color: '#78350f' },
-  { id: 'total', label: 'Total', color: '#111827' },
+  { id: 'verde', label: 'Verde' },
+  { id: 'muerta', label: 'Muerta' },
+  { id: 'total', label: 'Total' },
 ] as const;
 
 type SerieId = (typeof SERIES)[number]['id'];
@@ -35,6 +37,10 @@ function share(p: SeriePunto, s: 'verde' | 'muerta'): number {
 
 /** Gráfico de líneas minimalista: evolución del stock en el tiempo. */
 export default function SerieTemporal({ finca, lotes, loteIdExterno, parcelaIdExterna }: Props) {
+  const pal = useDataPalette();
+  const ui = useUiPalette();
+  const colorDe = (id: SerieId): string =>
+    id === 'verde' ? pal.verde : id === 'muerta' ? pal.muerta : pal.total;
   const [loteId, setLoteId] = useState<string>('');
   const [parcelaId, setParcelaId] = useState<string>('');
   const [parcelas, setParcelas] = useState<{ id: number; nombre: string }[]>([]);
@@ -188,7 +194,7 @@ export default function SerieTemporal({ finca, lotes, loteIdExterno, parcelaIdEx
                 onClick={() => toggle(s.id)}
                 title="Mostrar/ocultar serie"
               >
-                <span className="swatch" style={{ background: activas[s.id] ? s.color : '#d4dcd3' }} />
+                <span className="swatch" style={{ background: activas[s.id] ? colorDe(s.id) : pal.swatchOff }} />
                 {s.label}
               </button>
             ))}
@@ -207,9 +213,9 @@ export default function SerieTemporal({ finca, lotes, loteIdExterno, parcelaIdEx
             {deltas.map((d) => {
               const sube = d.d >= 0;
               return (
-                <span key={d.id} style={{ fontSize: '0.78rem', fontWeight: 600, color: '#111827' }}>
+                <span key={d.id} style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--densidad-total)' }}>
                   {d.label}:
-                  <b style={{ color: sube ? '#15803d' : '#b91c1c' }}>
+                  <b style={{ color: sube ? 'var(--delta-up)' : 'var(--delta-down)' }}>
                     {' '}{sube ? '▲' : '▼'} {Math.abs(d.d).toFixed(1)}%
                   </b>
                 </span>
@@ -249,10 +255,10 @@ export default function SerieTemporal({ finca, lotes, loteIdExterno, parcelaIdEx
             const yy = (t: number) => PAD.t + ph - (t / maxV) * ph;
             return (
               <g>
-                <rect x={PAD.l} y={PAD.t} width={pw} height={ph} fill="none" stroke="#000" strokeWidth={0.75} />
+                <rect x={PAD.l} y={PAD.t} width={pw} height={ph} fill="none" stroke={ui.axisPrimary} strokeWidth={0.75} />
                 {ticks.map((t) => (
                   <g key={t}>
-                    <line x1={PAD.l - 4} x2={PAD.l} y1={yy(t)} y2={yy(t)} stroke="#000" strokeWidth={0.75} />
+                    <line x1={PAD.l - 4} x2={PAD.l} y1={yy(t)} y2={yy(t)} stroke={ui.axisPrimary} strokeWidth={0.75} />
                     <text x={PAD.l - 8} y={yy(t) + 4} textAnchor="end" className="tick">{fmtV(t)}</text>
                   </g>
                 ))}
@@ -269,7 +275,7 @@ export default function SerieTemporal({ finca, lotes, loteIdExterno, parcelaIdEx
             const x = coords[i]?.x ?? 0;
             return (
               <g key={p.fecha}>
-                <line x1={x} x2={x} y1={H - PAD.b} y2={H - PAD.b + 4} stroke="#000" strokeWidth={0.75} />
+                <line x1={x} x2={x} y1={H - PAD.b} y2={H - PAD.b + 4} stroke={ui.axisPrimary} strokeWidth={0.75} />
                 <text x={x} y={H - PAD.b + 18} textAnchor="middle" className="tick">
                   {fmtFechaCorta(p.fecha).slice(0, 5)}
                 </text>
@@ -280,7 +286,7 @@ export default function SerieTemporal({ finca, lotes, loteIdExterno, parcelaIdEx
             Fecha
           </text>
           {paths.map((s) => {
-            const color = SERIES.find((x) => x.id === s.id)?.color;
+            const color = colorDe(s.id);
             const base = s.id === 'total' ? 3 : 2.5;
             return (
               <path
@@ -316,7 +322,7 @@ export default function SerieTemporal({ finca, lotes, loteIdExterno, parcelaIdEx
                     cx={c.x}
                     cy={d.y}
                     r={isHover ? 7 : isDateHover ? 5.5 : d.id === 'total' ? 4 : 3.5}
-                    fill={SERIES.find((x) => x.id === d.id)?.color}
+                    fill={colorDe(d.id)}
                     opacity={dimmed ? 0.3 : 1}
                     pointerEvents="none"
                   />
@@ -331,7 +337,7 @@ export default function SerieTemporal({ finca, lotes, loteIdExterno, parcelaIdEx
                   id: d.id,
                   y: d.y,
                   v: d.v,
-                  color: SERIES.find((x) => x.id === d.id)?.color ?? '#000',
+                  color: colorDe(d.id),
                 }))
                 .sort((a, b) => a.y - b.y);
               // Separación mínima para que no se solapen.
@@ -355,12 +361,12 @@ export default function SerieTemporal({ finca, lotes, loteIdExterno, parcelaIdEx
             /* pointerEvents none: la caja no debe robar el hover del punto. */
             <g pointerEvents="none">
               <g transform={`translate(${Math.min(coords[hover.i].x + 10, W - 158)},${PAD.t + 6})`}>
-                <rect width="148" height={20 + coords[hover.i].dots.length * 15} rx="7" fill="rgba(20,35,20,.92)" />
-                <text x="8" y="15" fill="#fff" fontSize="11" fontWeight="700">
+                <rect width="148" height={20 + coords[hover.i].dots.length * 15} rx="7" fill={ui.mapHintBg} />
+                <text x="8" y="15" fill={ui.mapHintTitle} fontSize="11" fontWeight="700">
                   {fmtFechaCorta(puntos[hover.i].fecha)} · {unidad}
                 </text>
                 {coords[hover.i].dots.map((d, j) => (
-                  <text key={d.id} x="8" y={30 + j * 15} fill="#e7f6e3" fontSize="11">
+                  <text key={d.id} x="8" y={30 + j * 15} fill={ui.mapHintText} fontSize="11">
                     {SERIES.find((x) => x.id === d.id)?.label}: {fmtV(d.v)}
                     {d.id !== 'total' && ` (${share(puntos[hover.i], d.id).toFixed(0)}%)`}
                   </text>

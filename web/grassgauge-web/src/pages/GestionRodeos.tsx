@@ -865,9 +865,9 @@ export default function GestionRodeos() {
                           title="Color automático (recomendado): lo elige la app"
                           aria-label="Color automático"
                           style={{
-                            width: 26, height: 26, borderRadius: 8, border: '1px solid #d1d5db',
-                            background: 'repeating-linear-gradient(45deg, #e5e7eb 0 4px, #ffffff 4px 8px)',
-                            outline: colorSel === '' ? '2px solid #111827' : 'none', outlineOffset: 2,
+                            width: 26, height: 26, borderRadius: 8, border: '1px solid var(--neutral-line)',
+                            background: 'repeating-linear-gradient(45deg, var(--neutral-cell) 0 4px, var(--bg-card) 4px 8px)',
+                            outline: colorSel === '' ? '2px solid var(--text-primary)' : 'none', outlineOffset: 2,
                             cursor: 'pointer',
                           }}
                         >
@@ -883,8 +883,8 @@ export default function GestionRodeos() {
                               disabled={enUso}
                               title={enUso ? `Color ${c} ya usado por otro lote` : colorSel === c ? 'Clic para volver a automático' : `Fijar color ${c}`}
                               style={{
-                                width: 26, height: 26, borderRadius: '50%', background: c, border: '1px solid #d1d5db',
-                                outline: colorSel === c ? '2px solid #111827' : 'none', outlineOffset: 2,
+                                width: 26, height: 26, borderRadius: '50%', background: c, border: '1px solid var(--neutral-line)',
+                                outline: colorSel === c ? '2px solid var(--text-primary)' : 'none', outlineOffset: 2,
                                 opacity: enUso ? 0.25 : 1, cursor: enUso ? 'not-allowed' : 'pointer',
                               }}
                             />
@@ -1171,7 +1171,7 @@ export default function GestionRodeos() {
                                     </td>
                                     <td>
                                       {consumoPlan == null ? (
-                                        <span className="comp-legend-chip" style={{ background: '#f3f4f6', color: '#6b7280' }}>
+                                        <span className="comp-legend-chip" style={{ background: 'var(--neutral-cell)', color: 'var(--text-muted)' }}>
                                           elegí lote para calcular
                                         </span>
                                       ) : (
@@ -1348,7 +1348,7 @@ export default function GestionRodeos() {
                           <td className="num">{plan != null ? `${fmt1(plan)}d` : '—'}</td>
                           <td
                             className="num"
-                            style={esVigente && plan != null && (e.dias_transcurridos ?? 0) > plan ? { color: '#b91c1c', fontWeight: 700 } : undefined}
+                            style={esVigente && plan != null && (e.dias_transcurridos ?? 0) > plan ? { color: 'var(--delta-down)', fontWeight: 700 } : undefined}
                           >{e.dias_transcurridos != null ? `${fmt1(e.dias_transcurridos)}d` : '—'}</td>
                           <td className="num">
                             {esVigente && (
@@ -1460,7 +1460,7 @@ export default function GestionRodeos() {
                               ))}
                             </span>
                           </td>
-                          <td><span className="comp-legend-chip" style={{ color: '#9ca3af' }}>finalizada</span></td>
+                          <td><span className="comp-legend-chip" style={{ color: 'var(--text-faint)' }}>finalizada</span></td>
                           <td className="num">{planDias ? `${fmt1(planDias)}d` : '—'}</td>
                           <td className="num">—</td>
                           <td />

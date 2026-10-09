@@ -7,34 +7,34 @@ export default {
       colors: {
         // Aristeus Corporate Palette
         'aristeus': {
-          'navy': '#0B2341',
-          'green': '#6BA539',
-          'secondary': '#355E3B',
+          'navy': 'rgb(var(--tw-aristeus-navy) / <alpha-value>)',
+          'green': 'rgb(var(--tw-aristeus-green) / <alpha-value>)',
+          'secondary': 'rgb(var(--tw-aristeus-secondary) / <alpha-value>)',
         },
         // Backgrounds
         'bg': {
-          'primary': '#F5F7F4',
-          'secondary': '#D8DEE3',
-          'card': '#FFFFFF',
+          'primary': 'rgb(var(--tw-bg-primary) / <alpha-value>)',
+          'secondary': 'rgb(var(--tw-bg-secondary) / <alpha-value>)',
+          'card': 'rgb(var(--tw-bg-card) / <alpha-value>)',
         },
         // Text
         'text': {
-          'primary': '#2B2F36',
-          'secondary': '#355E3B',
-          'inverse': '#F5F7F4',
+          'primary': 'rgb(var(--tw-text-primary) / <alpha-value>)',
+          'secondary': 'rgb(var(--tw-text-secondary) / <alpha-value>)',
+          'inverse': 'rgb(var(--tw-text-inverse) / <alpha-value>)',
         },
-        'border-subtle': '#D8DEE3',
+        'border-subtle': 'rgb(var(--tw-border-subtle) / <alpha-value>)',
         // Grass Gauge Palette
         'gg': {
-          'green-dark': '#355E3B',
-          'green-mid': '#6BA539',
-          'green-light': '#6BA539',
+          'green-dark': 'rgb(var(--tw-gg-green-dark) / <alpha-value>)',
+          'green-mid': 'rgb(var(--tw-gg-green-mid) / <alpha-value>)',
+          'green-light': 'rgb(var(--tw-gg-green-light) / <alpha-value>)',
         },
         // CattleVision Palette
         'cv': {
-          'charcoal': '#2B2F36',
-          'gold': '#B8963E',
-          'dark': '#0B2341',
+          'charcoal': 'rgb(var(--tw-cv-charcoal) / <alpha-value>)',
+          'gold': 'rgb(var(--tw-cv-gold) / <alpha-value>)',
+          'dark': 'rgb(var(--tw-cv-dark) / <alpha-value>)',
         }
       },
       fontFamily: {

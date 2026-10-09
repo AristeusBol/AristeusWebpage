@@ -40,6 +40,18 @@ const pageTitle = title ? `${title} | Aristeus` : 'Aristeus - Inteligencia Artif
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     
     <title>{pageTitle}</title>
+    
+    <!-- Dark mode init (evita flash de tema) -->
+    <script is:inline>
+      (() => {
+        const stored = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const dark = stored ? stored === 'dark' : prefersDark;
+        document.documentElement.classList.toggle('dark', dark);
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', dark ? '#0B2341' : '#F5F7F4');
+      })();
+    </script>
   </head>
   <body class="min-h-screen bg-bg-primary text-text-primary antialiased">
     <Nav />

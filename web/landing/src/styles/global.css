@@ -5,6 +5,8 @@
 @tailwind utilities;
 
 :root {
+  /* SOURCE: web/shared/brand.tokens.css (fuente de verdad) */
+
   /* Brand core */
   --aristeus-navy: #0B2341;
   --aristeus-green: #6BA539;
@@ -12,6 +14,18 @@
   --technical-graphite: #2B2F36;
   --mineral-white: #F5F7F4;
   --mist-gray: #D8DEE3;
+
+  /* Brand derived shades */
+  --aristeus-navy-soft: #152d4a;
+  --aristeus-navy-card: #13203a;
+  --aristeus-navy-border: #2a3f5e;
+  --aristeus-green-soft: #8FD14F;
+  --aristeus-green-bright: #A8E65D;
+  --aristeus-gold-soft: #D4A84E;
+  --aristeus-navy-10: rgba(11, 35, 65, 0.08);
+  --aristeus-navy-35: rgba(0, 0, 0, 0.35);
+  --aristeus-green-28: rgba(107, 165, 57, 0.28);
+  --aristeus-gold-35: rgba(184, 150, 62, 0.35);
 
   /* Semantic palette */
   --bg-primary: var(--mineral-white);
@@ -26,8 +40,10 @@
   --link-hover: var(--aristeus-secondary);
   --button-primary-bg: var(--aristeus-navy);
   --button-primary-text: var(--mineral-white);
+  --button-primary-hover: var(--aristeus-navy-soft);
   --button-secondary-bg: var(--aristeus-green);
   --button-secondary-text: var(--mineral-white);
+  --button-secondary-hover: #5a8a2f;
 
   /* Product palette constrained to brand system */
   --gg-green-dark: var(--aristeus-secondary);
@@ -43,6 +59,71 @@
   --font-heading: 'Space Grotesk', sans-serif;
   --font-body: 'IBM Plex Sans', sans-serif;
   --font-data: 'JetBrains Mono', monospace;
+
+  /* RGB triplets exposed to Tailwind (enable dark mode via .dark) */
+  --tw-aristeus-navy: 11 35 65;
+  --tw-aristeus-green: 107 165 57;
+  --tw-aristeus-secondary: 53 94 59;
+  --tw-bg-primary: 245 247 244;
+  --tw-bg-secondary: 216 222 227;
+  --tw-bg-card: 255 255 255;
+  --tw-text-primary: 43 47 54;
+  --tw-text-secondary: 53 94 59;
+  --tw-text-inverse: 245 247 244;
+  --tw-border-subtle: 216 222 227;
+  --tw-gg-green-dark: 53 94 59;
+  --tw-gg-green-mid: 107 165 57;
+  --tw-gg-green-light: 107 165 57;
+  --tw-cv-charcoal: 43 47 54;
+  --tw-cv-gold: 184 150 62;
+  --tw-cv-dark: 11 35 65;
+}
+
+.dark {
+  /* Dark theme semantic palette — derivada de la paleta oficial */
+  --bg-primary: var(--aristeus-navy);
+  --bg-secondary: var(--aristeus-navy-soft);
+  --bg-card: var(--aristeus-navy-card);
+  --text-primary: var(--mineral-white);
+  --text-secondary: var(--aristeus-green);
+  --text-inverse: var(--aristeus-navy);
+  --border-subtle: var(--aristeus-navy-border);
+  --heading: var(--mineral-white);
+  --link: var(--aristeus-green);
+  --link-hover: var(--aristeus-green-bright);
+  --button-primary-bg: var(--aristeus-green);
+  --button-primary-text: var(--aristeus-navy);
+  --button-primary-hover: var(--aristeus-green-bright);
+  --button-secondary-bg: var(--aristeus-navy);
+  --button-secondary-text: var(--mineral-white);
+  --button-secondary-hover: var(--aristeus-navy-soft);
+
+  --gg-green-dark: var(--aristeus-green);
+  --gg-green-mid: var(--aristeus-green-soft);
+  --gg-green-light: var(--aristeus-green-bright);
+  --gg-gradient: linear-gradient(135deg, var(--aristeus-green), var(--aristeus-green-soft));
+  --cv-charcoal: var(--technical-graphite);
+  --cv-gold: var(--aristeus-gold-soft);
+  --cv-dark: var(--aristeus-navy-soft);
+  --cv-gradient: linear-gradient(135deg, var(--aristeus-navy-soft), var(--aristeus-gold-soft));
+
+  /* RGB triplets for Tailwind in dark mode */
+  --tw-aristeus-navy: 11 35 65;
+  --tw-aristeus-green: 143 209 79;
+  --tw-aristeus-secondary: 168 230 93;
+  --tw-bg-primary: 11 35 65;
+  --tw-bg-secondary: 21 45 74;
+  --tw-bg-card: 19 32 58;
+  --tw-text-primary: 245 247 244;
+  --tw-text-secondary: 107 165 57;
+  --tw-text-inverse: 11 35 65;
+  --tw-border-subtle: 42 63 94;
+  --tw-gg-green-dark: 107 165 57;
+  --tw-gg-green-mid: 143 209 79;
+  --tw-gg-green-light: 168 230 93;
+  --tw-cv-charcoal: 216 222 227;
+  --tw-cv-gold: 212 168 78;
+  --tw-cv-dark: 21 45 74;
 }
 
 html {
@@ -96,7 +177,12 @@ body {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border-subtle);
-  box-shadow: 0 18px 40px rgba(11, 35, 65, 0.08);
+  box-shadow: 0 18px 40px var(--aristeus-navy-10);
+}
+
+.dark .glass {
+  background: rgba(19, 32, 58, 0.82);
+  box-shadow: 0 18px 40px var(--aristeus-navy-35);
 }
 
 /* Gradient borders */

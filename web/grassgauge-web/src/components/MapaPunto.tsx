@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Map, NavigationControl, type GeoJSONSource, type StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { PotreroDetalleFeature } from '../lib/api';
+import { MAP_CHROME } from '../lib/mapPalette';
 
 interface Props {
   features: PotreroDetalleFeature[];
@@ -25,16 +26,16 @@ function buildStyle(): StyleSpecification {
     },
     layers: [
       { id: 'esri', type: 'raster', source: 'esri' },
-      { id: 'exc-fill', type: 'fill', source: 'exc', paint: { 'fill-color': '#dc2626', 'fill-opacity': 0.35 } },
-      { id: 'exc-line', type: 'line', source: 'exc', paint: { 'line-color': '#fecaca', 'line-width': 1.5, 'line-dasharray': [3, 2] } },
-      { id: 'pot-casing', type: 'line', source: 'pot', paint: { 'line-color': '#052e16', 'line-width': 5, 'line-opacity': 0.9 } },
-      { id: 'pot-line', type: 'line', source: 'pot', paint: { 'line-color': '#ffffff', 'line-width': 2 } },
+      { id: 'exc-fill', type: 'fill', source: 'exc', paint: { 'fill-color': MAP_CHROME.exclusionesRelleno, 'fill-opacity': 0.35 } },
+      { id: 'exc-line', type: 'line', source: 'exc', paint: { 'line-color': MAP_CHROME.exclusionesTexto, 'line-width': 1.5, 'line-dasharray': [3, 2] } },
+      { id: 'pot-casing', type: 'line', source: 'pot', paint: { 'line-color': MAP_CHROME.potreroCasing, 'line-width': 5, 'line-opacity': 0.9 } },
+      { id: 'pot-line', type: 'line', source: 'pot', paint: { 'line-color': MAP_CHROME.potreroLine, 'line-width': 2 } },
       {
         id: 'pot-label', type: 'symbol', source: 'pot',
         layout: { 'text-field': ['get', 'nombre'], 'text-size': 13, 'text-allow-overlap': true },
-        paint: { 'text-color': '#ffffff', 'text-halo-color': 'rgba(0,0,0,0.7)', 'text-halo-width': 1.5 },
+        paint: { 'text-color': MAP_CHROME.textoSatelite, 'text-halo-color': MAP_CHROME.haloFuerte, 'text-halo-width': 1.5 },
       },
-      { id: 'marca', type: 'circle', source: 'marca', paint: { 'circle-radius': 8, 'circle-color': '#f59e0b', 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } },
+      { id: 'marca', type: 'circle', source: 'marca', paint: { 'circle-radius': 8, 'circle-color': MAP_CHROME.dibujoBorde, 'circle-stroke-color': MAP_CHROME.textoSatelite, 'circle-stroke-width': 2 } },
     ],
   } as StyleSpecification;
 }

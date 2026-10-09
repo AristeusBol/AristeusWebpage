@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { api, type HistogramaResponse, type PotreroItem } from '../lib/api';
 import { fmtFechaCorta } from '../lib/masaSeca';
 import { niceTicks } from '../lib/zonas';
+import { useDataPalette } from '../hooks/useDataPalette';
+import { useUiPalette } from '../hooks/useUiPalette';
 
 interface Props {
   finca: string;
@@ -18,8 +20,8 @@ interface Props {
 // Paleta propia del histograma (análisis distinto a Series: sin verdes/rojos de franjas).
 // Pirámide vertical: Verde arriba, Muerta abajo.
 const LADOS = [
-  { id: 'verde', label: 'Verde', color: '#10b981', dir: -1 },
-  { id: 'muerta', label: 'Muerta', color: '#78350f', dir: 1 },
+  { id: 'verde', label: 'Verde', dir: -1 },
+  { id: 'muerta', label: 'Muerta', dir: 1 },
 ] as const;
 
 type SerieId = (typeof LADOS)[number]['id'];
@@ -30,6 +32,10 @@ const PAD = { l: 52, r: 14, t: 12, b: 46 };
 
 /** Histograma comparado + comparativa por fecha (barras agrupadas t/ha). */
 export default function Histograma({ finca, fecha, fechas, onFecha, lotes, loteIdExterno, parcelaIdExterna }: Props) {
+  const pal = useDataPalette();
+  const ui = useUiPalette();
+  const colorDe = (id: SerieId): string =>
+    id === 'verde' ? pal.verde : pal.muerta;
   const BINS = 50; // fijo: comparable entre fechas y lotes
   const [loteId, setLoteId] = useState<string>('');
   const [parcelaId, setParcelaId] = useState<string>('');
@@ -90,7 +96,7 @@ export default function Histograma({ finca, fecha, fechas, onFecha, lotes, loteI
       const s = data?.series[id];
       return {
         id,
-        color: LADOS.find((x) => x.id === id)?.color ?? '#000',
+        color: colorDe(id),
         dir: LADOS.find((x) => x.id === id)?.dir ?? 1,
         mean: s?.mean != null ? s.mean * k : null,
         counts: s?.counts ?? [],
@@ -188,7 +194,7 @@ export default function Histograma({ finca, fecha, fechas, onFecha, lotes, loteI
                 onClick={() => toggle(s.id)}
                 title="Mostrar/ocultar lado"
               >
-                <span className="swatch" style={{ background: activas[s.id] ? s.color : '#d4dcd3' }} />
+                <span className="swatch" style={{ background: activas[s.id] ? colorDe(s.id) : pal.swatchOff }} />
                 {s.label}
               </button>
             ))}
@@ -213,15 +219,15 @@ export default function Histograma({ finca, fecha, fechas, onFecha, lotes, loteI
           role="img"
           aria-label="Histograma comparado por intervalo"
         >
-          <rect x={PAD.l} y={PAD.t} width={iw} height={ih} fill="none" stroke="#000" strokeWidth={0.75} />
-          <line x1={PAD.l} x2={W - PAD.r} y1={midY} y2={midY} stroke="#000" strokeWidth={0.75} />
+          <rect x={PAD.l} y={PAD.t} width={iw} height={ih} fill="none" stroke={ui.axisPrimary} strokeWidth={0.75} />
+          <line x1={PAD.l} x2={W - PAD.r} y1={midY} y2={midY} stroke={ui.axisPrimary} strokeWidth={0.75} />
           {yTicks.map((t) => (
             <g key={t}>
-              <line x1={PAD.l - 4} x2={PAD.l} y1={Yv(t)} y2={Yv(t)} stroke="#000" strokeWidth={0.75} />
+              <line x1={PAD.l - 4} x2={PAD.l} y1={Yv(t)} y2={Yv(t)} stroke={ui.axisPrimary} strokeWidth={0.75} />
               <text x={PAD.l - 8} y={Yv(t) + 4} textAnchor="end" className="tick">{fmtP(t)}</text>
               {t > 0 && (
                 <g>
-                  <line x1={PAD.l - 4} x2={PAD.l} y1={Ym(t)} y2={Ym(t)} stroke="#000" strokeWidth={0.75} />
+                  <line x1={PAD.l - 4} x2={PAD.l} y1={Ym(t)} y2={Ym(t)} stroke={ui.axisPrimary} strokeWidth={0.75} />
                   <text x={PAD.l - 8} y={Ym(t) + 4} textAnchor="end" className="tick">{fmtP(t)}</text>
                 </g>
               )}
@@ -235,7 +241,7 @@ export default function Histograma({ finca, fecha, fechas, onFecha, lotes, loteI
           </text>
           {xTicks.map((t, i) => (
             <g key={i}>
-              <line x1={t.x} x2={t.x} y1={H - PAD.b} y2={H - PAD.b + 4} stroke="#000" strokeWidth={0.75} />
+              <line x1={t.x} x2={t.x} y1={H - PAD.b} y2={H - PAD.b + 4} stroke={ui.axisPrimary} strokeWidth={0.75} />
               <text x={t.x} y={H - PAD.b + 18} textAnchor="middle" className="tick">{fmtG(t.v)}</text>
             </g>
           ))}
@@ -260,7 +266,7 @@ export default function Histograma({ finca, fecha, fechas, onFecha, lotes, loteI
                         rx="2"
                         fill={s.color}
                         fillOpacity={hover === k ? 1 : 0.8}
-                        stroke={hover === k ? '#111827' : 'none'}
+                        stroke={hover === k ? ui.axisPrimary : 'none'}
                         strokeWidth={hover === k ? 1 : 0}
                       />
                     </g>
@@ -297,12 +303,12 @@ export default function Histograma({ finca, fecha, fechas, onFecha, lotes, loteI
             const gi = i0 + hover;
             return (
             <g transform={`translate(${Math.min(X(hover) + bw + 8, W - 150)},${PAD.t + 6})`}>
-              <rect width="140" height={16 + series.length * 13} rx="6" fill="rgba(20,35,20,.92)" />
-              <text x="7" y="13" fill="#fff" fontSize="10" fontWeight="700">
+              <rect width="140" height={16 + series.length * 13} rx="6" fill={ui.mapHintBg} />
+              <text x="7" y="13" fill={ui.mapHintTitle} fontSize="10" fontWeight="700">
                 {fmtG(edges[gi])} – {fmtG(edges[gi + 1])} {unit}
               </text>
               {series.map((s, j) => (
-                <text key={s.id} x="7" y={26 + j * 13} fill="#e7f6e3" fontSize="10">
+                <text key={s.id} x="7" y={26 + j * 13} fill={ui.mapHintText} fontSize="10">
                     {LADOS.find((x) => x.id === s.id)?.label}: {fmtP(s.pcts[gi] ?? 0)}
                   </text>
                 ))}

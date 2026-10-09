@@ -12,6 +12,7 @@ import {
   INITIAL_CENTER, INITIAL_ZOOM, bboxCombinado, buildStyleEsri, encuadrar,
   tilesUrl, transformRequestTiles,
 } from '../lib/mapCommon';
+import { MAP_CHROME } from '../lib/mapPalette';
 
 export interface PotreroFeature {
   type: 'Feature';
@@ -112,13 +113,13 @@ export default function MapaMasaSeca({ features, selectedId, onSelect, finca, fe
           source: 'potreros',
           // Sin relleno de color: el dato siempre se ve en modo puntos.
           // El fill transparente mantiene el clic por potrero.
-          paint: { 'fill-color': '#ffffff', 'fill-opacity': 0 },
+          paint: { 'fill-color': MAP_CHROME.potreroFill, 'fill-opacity': 0 },
         });
         map.addLayer({
           id: 'potreros-line',
           type: 'line',
           source: 'potreros',
-          paint: { 'line-color': '#ffffff', 'line-width': 2.5, 'line-opacity': 1 },
+          paint: { 'line-color': MAP_CHROME.potreroLine, 'line-width': 2.5, 'line-opacity': 1 },
         });
         map.addLayer({
           id: 'potreros-sel-halo',
@@ -126,21 +127,21 @@ export default function MapaMasaSeca({ features, selectedId, onSelect, finca, fe
           source: 'potreros',
           filter: sel,
           layout: { 'line-cap': 'round', 'line-join': 'round' },
-          paint: { 'line-color': '#052e16', 'line-width': 5.5, 'line-opacity': 0.6 },
+          paint: { 'line-color': MAP_CHROME.potreroCasing, 'line-width': 5.5, 'line-opacity': 0.6 },
         });
         map.addLayer({
           id: 'potreros-sel',
           type: 'line',
           source: 'potreros',
           filter: sel,
-          paint: { 'line-color': '#fde047', 'line-width': 4, 'line-opacity': 1 },
+          paint: { 'line-color': MAP_CHROME.seleccionAmarilloLuz, 'line-width': 4, 'line-opacity': 1 },
         });
         map.addLayer({
           id: 'potreros-hover',
           type: 'line',
           source: 'potreros',
           filter: ['==', ['get', 'id'], -1] as FilterSpecification,
-          paint: { 'line-color': '#ffffff', 'line-width': 3, 'line-opacity': 0.9 },
+          paint: { 'line-color': MAP_CHROME.potreroLine, 'line-width': 3, 'line-opacity': 0.9 },
         });
         map.addLayer({
           id: 'potreros-label',
@@ -152,8 +153,8 @@ export default function MapaMasaSeca({ features, selectedId, onSelect, finca, fe
             'text-allow-overlap': true,
           },
           paint: {
-            'text-color': '#ffffff',
-            'text-halo-color': 'rgba(0,0,0,0.65)',
+            'text-color': MAP_CHROME.textoSatelite,
+            'text-halo-color': MAP_CHROME.halo,
             'text-halo-width': 1.5,
           },
         });
@@ -223,7 +224,7 @@ export default function MapaMasaSeca({ features, selectedId, onSelect, finca, fe
               id: 'exclusiones-fill',
               type: 'fill',
               source: 'exclusiones',
-              paint: { 'fill-color': '#111827', 'fill-opacity': 0.45 },
+              paint: { 'fill-color': MAP_CHROME.exclusionesOscuro, 'fill-opacity': 0.45 },
             },
             before,
           );
@@ -232,7 +233,7 @@ export default function MapaMasaSeca({ features, selectedId, onSelect, finca, fe
               id: 'exclusiones-line',
               type: 'line',
               source: 'exclusiones',
-              paint: { 'line-color': '#ffffff', 'line-width': 2.5, 'line-opacity': 1 },
+              paint: { 'line-color': MAP_CHROME.potreroLine, 'line-width': 2.5, 'line-opacity': 1 },
             },
             before,
           );
@@ -258,13 +259,13 @@ export default function MapaMasaSeca({ features, selectedId, onSelect, finca, fe
         if (!map.getLayer('parcelas-fill')) {
           if (!par) map.addSource('parcelas', { type: 'geojson', data: fcPar });
           else par.setData(fcPar);
-          map.addLayer({ id: 'parcelas-fill', type: 'fill', source: 'parcelas', paint: { 'fill-color': '#facc15', 'fill-opacity': 0 } }, beforePar);
-          map.addLayer({ id: 'parcelas-line', type: 'line', source: 'parcelas', filter: noSelPar, paint: { 'line-color': '#e2e8f0', 'line-width': 1, 'line-opacity': 0.9 } }, beforePar);
-          map.addLayer({ id: 'parcelas-sel', type: 'line', source: 'parcelas', filter: selPar, paint: { 'line-color': '#22d3ee', 'line-width': 3 } }, beforePar);
+          map.addLayer({ id: 'parcelas-fill', type: 'fill', source: 'parcelas', paint: { 'fill-color': MAP_CHROME.seleccionAmarillo, 'fill-opacity': 0 } }, beforePar);
+          map.addLayer({ id: 'parcelas-line', type: 'line', source: 'parcelas', filter: noSelPar, paint: { 'line-color': MAP_CHROME.parcelaLinea, 'line-width': 1, 'line-opacity': 0.9 } }, beforePar);
+          map.addLayer({ id: 'parcelas-sel', type: 'line', source: 'parcelas', filter: selPar, paint: { 'line-color': MAP_CHROME.seleccionCyan, 'line-width': 3 } }, beforePar);
           map.addLayer({
             id: 'parcelas-label', type: 'symbol', source: 'parcelas', minzoom: 14,
             layout: { 'text-field': ['get', 'etiqueta'], 'text-size': 11, 'text-allow-overlap': false },
-            paint: { 'text-color': '#fefce8', 'text-halo-color': 'rgba(0,0,0,0.7)', 'text-halo-width': 1.5 },
+            paint: { 'text-color': MAP_CHROME.textoParcela, 'text-halo-color': MAP_CHROME.haloFuerte, 'text-halo-width': 1.5 },
           });
         } else {
           par?.setData(fcPar);
@@ -300,9 +301,9 @@ export default function MapaMasaSeca({ features, selectedId, onSelect, finca, fe
       if (!map.getLayer('dibujo-fill')) {
         if (!dib) map.addSource('dibujo', { type: 'geojson', data: dibujoFC });
         else dib.setData(dibujoFC);
-        map.addLayer({ id: 'dibujo-fill', type: 'fill', source: 'dibujo', paint: { 'fill-color': '#22c55e', 'fill-opacity': 0.25 } });
-        map.addLayer({ id: 'dibujo-line', type: 'line', source: 'dibujo', paint: { 'line-color': '#22c55e', 'line-width': 2 } });
-        map.addLayer({ id: 'dibujo-pt', type: 'circle', source: 'dibujo', paint: { 'circle-color': '#22c55e', 'circle-radius': 5, 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } });
+        map.addLayer({ id: 'dibujo-fill', type: 'fill', source: 'dibujo', paint: { 'fill-color': MAP_CHROME.dibujoVerde, 'fill-opacity': 0.25 } });
+        map.addLayer({ id: 'dibujo-line', type: 'line', source: 'dibujo', paint: { 'line-color': MAP_CHROME.dibujoVerde, 'line-width': 2 } });
+        map.addLayer({ id: 'dibujo-pt', type: 'circle', source: 'dibujo', paint: { 'circle-color': MAP_CHROME.dibujoVerde, 'circle-radius': 5, 'circle-stroke-color': MAP_CHROME.textoSatelite, 'circle-stroke-width': 2 } });
       } else {
         dib?.setData(dibujoFC);
       }
@@ -416,7 +417,7 @@ export default function MapaMasaSeca({ features, selectedId, onSelect, finca, fe
       }
       const s = aplicarIman(e.lngLat.lng, e.lngLat.lat, e.point);
       const d = s.tipo === 'vertice' ? 34 : s.tipo === 'borde' ? 28 : 16;
-      const col = s.tipo === 'vertice' ? '#22c55e' : s.tipo === 'borde' ? '#f59e0b' : 'rgba(255,255,255,0.9)';
+      const col = s.tipo === 'vertice' ? MAP_CHROME.dibujoVerde : s.tipo === 'borde' ? MAP_CHROME.dibujoBorde : MAP_CHROME.verticeStroke;
       anillo.style.display = 'block';
       anillo.style.width = `${d}px`;
       anillo.style.height = `${d}px`;

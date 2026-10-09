@@ -38,8 +38,16 @@ const navLinks = [
         ))}
       </div>
 
-      <!-- Right side: Auth -->
+      <!-- Right side: Theme toggle + Auth -->
       <div class="hidden md:flex items-center gap-4">
+        <button
+          id="theme-toggle-desktop"
+          class="p-2 text-text-secondary hover:text-text-primary transition-smooth focus:outline-none"
+          aria-label="Cambiar tema"
+          title="Cambiar tema"
+        >
+          <svg id="theme-icon-desktop" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+        </button>
         <!-- Auth state: rendered by JS -->
         <div id="auth-desktop" class="flex items-center gap-3">
           <a href="/login" id="nav-login-desktop" class="text-text-secondary hover:text-text-primary font-medium transition-smooth text-sm">
@@ -75,6 +83,16 @@ const navLinks = [
   <!-- Mobile menu -->
   <div id="mobile-menu" class="hidden md:hidden border-t border-border-subtle bg-bg-card">
     <div class="px-4 py-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <button
+          id="theme-toggle-mobile"
+          class="p-2 text-text-secondary hover:text-text-primary transition-smooth focus:outline-none"
+          aria-label="Cambiar tema"
+          title="Cambiar tema"
+        >
+          <svg id="theme-icon-mobile" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+        </button>
+      </div>
       {navLinks.map(link => (
         <a 
           href={link.href} 
@@ -187,4 +205,34 @@ const navLinks = [
 
   // Initial state
   updateAuthUI();
+
+  // Dark mode toggle
+  const sunIcon = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>';
+  const moonIcon = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+
+  function setThemeIcons(dark) {
+    const svgDesktop = document.getElementById('theme-icon-desktop');
+    const svgMobile = document.getElementById('theme-icon-mobile');
+    const icon = dark ? sunIcon : moonIcon;
+    if (svgDesktop) svgDesktop.innerHTML = icon;
+    if (svgMobile) svgMobile.innerHTML = icon;
+  }
+
+  function applyTheme(dark) {
+    document.documentElement.classList.toggle('dark', dark);
+    localStorage.setItem('theme', dark ? 'dark' : 'light');
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', dark ? '#0B2341' : '#F5F7F4');
+    setThemeIcons(dark);
+  }
+
+  document.getElementById('theme-toggle-desktop')?.addEventListener('click', () => {
+    applyTheme(!document.documentElement.classList.contains('dark'));
+  });
+  document.getElementById('theme-toggle-mobile')?.addEventListener('click', () => {
+    applyTheme(!document.documentElement.classList.contains('dark'));
+  });
+
+  // Sync icons with the class already applied on init
+  setThemeIcons(document.documentElement.classList.contains('dark'));
 </script>

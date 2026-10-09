@@ -1,0 +1,245 @@
+/* ============================================================================
+ * ARISTEUS BRAND TOKENS  —  FUENTE DE VERDAD ÚNICA
+ * ----------------------------------------------------------------------------
+ * Origen: web/landing/img/brand.txt (paleta oficial) + brand_css.txt
+ * Tipografía: Space Grotesk (headings) / IBM Plex Sans (body) / JetBrains Mono (data)
+ *
+ * REGLAS DE MARCA (brand.txt):
+ *   - No introducir colores nuevos salvo variantes de opacidad o estados hover.
+ *   - Mantener contraste alto entre texto y fondo.
+ *   - Estética científica, limpia, corporativa y agro-tecnológica.
+ *
+ * USO: este archivo es la fuente canónica. Los proyectos lo DUPLICAN físicamente
+ * con un marcador `SOURCE: web/shared/brand.tokens.css`.
+ *   - web/landing           -> src/styles/global.css (bloque :root/.dark + tripletas RGB)
+ *   - web/grassgauge-web    -> src/styles/design-tokens.css
+ *
+ * Estructura:
+ *   1) Brand core (hex)           5) Product palettes (gg/cv)
+ *   2) Derivados de marca         6) Data semantics (excepciones de datos)
+ *   3) Semánticos light           7) Status colors (excepción documentada)
+ *   4) Semánticos dark            8) Tipografía + componentes + RGB triplets
+ * ============================================================================ */
+
+:root {
+  /* ===== 1) ARISTEUS BRAND CORE =========================================== */
+  --aristeus-navy: #0B2341;
+  --aristeus-green: #6BA539;
+  --aristeus-secondary: #355E3B;
+  --technical-graphite: #2B2F36;
+  --mineral-white: #F5F7F4;
+  --mist-gray: #D8DEE3;
+
+  /* ===== 2) BRAND DERIVED SHADES ========================================== */
+  /* Variantes por opacidad/hover, derivadas de los 6 colores oficiales. */
+  --aristeus-navy-soft: #152d4a;
+  --aristeus-navy-card: #13203a;
+  --aristeus-navy-border: #2a3f5e;
+  --aristeus-green-soft: #8FD14F;
+  --aristeus-green-bright: #A8E65D;
+  --aristeus-gold-soft: #D4A84E;
+  --aristeus-navy-10: rgba(11, 35, 65, 0.08);
+  --aristeus-navy-35: rgba(0, 0, 0, 0.35);
+  --aristeus-green-28: rgba(107, 165, 57, 0.28);
+  --aristeus-gold-35: rgba(184, 150, 62, 0.35);
+
+  /* ===== 3) SEMANTIC PALETTE (LIGHT) ====================================== */
+  --bg-primary: var(--mineral-white);
+  --bg-secondary: var(--mist-gray);
+  --bg-card: #FFFFFF;
+  --text-primary: var(--technical-graphite);
+  --text-secondary: var(--aristeus-secondary);
+  --text-inverse: var(--mineral-white);
+  --border-subtle: var(--mist-gray);
+  --heading: var(--aristeus-navy);
+  --link: var(--aristeus-navy);
+  --link-hover: var(--aristeus-secondary);
+
+  /* ===== 4) RGB TRIPLETS FOR TAILWIND (v3 landing) ======================== */
+  --tw-aristeus-navy: 11 35 65;
+  --tw-aristeus-green: 107 165 57;
+  --tw-aristeus-secondary: 53 94 59;
+  --tw-bg-primary: 245 247 244;
+  --tw-bg-secondary: 216 222 227;
+  --tw-bg-card: 255 255 255;
+  --tw-text-primary: 43 47 54;
+  --tw-text-secondary: 53 94 59;
+  --tw-text-inverse: 245 247 244;
+  --tw-border-subtle: 216 222 227;
+  --tw-gg-green-dark: 53 94 59;
+  --tw-gg-green-mid: 107 165 57;
+  --tw-gg-green-light: 107 165 57;
+  --tw-cv-charcoal: 43 47 54;
+  --tw-cv-gold: 184 150 62;
+  --tw-cv-dark: 11 35 65;
+}
+
+/* ===== 4) SEMANTIC PALETTE (DARK) — derivada de la paleta oficial ========== */
+/* Navy como fondo base, mineral_white como texto, verde como acento.          */
+.dark {
+  --bg-primary: var(--aristeus-navy);
+  --bg-secondary: var(--aristeus-navy-soft);
+  --bg-card: var(--aristeus-navy-card);
+  --text-primary: var(--mineral-white);
+  --text-secondary: var(--aristeus-green);
+  --text-inverse: var(--aristeus-navy);
+  --border-subtle: var(--aristeus-navy-border);
+  --heading: var(--mineral-white);
+  --link: var(--aristeus-green);
+  --link-hover: var(--aristeus-green-bright);
+
+  /* RGB triplets para Tailwind en dark */
+  --tw-aristeus-navy: 11 35 65;
+  --tw-aristeus-green: 143 209 79;
+  --tw-aristeus-secondary: 168 230 93;
+  --tw-bg-primary: 11 35 65;
+  --tw-bg-secondary: 21 45 74;
+  --tw-bg-card: 19 32 58;
+  --tw-text-primary: 245 247 244;
+  --tw-text-secondary: 107 165 57;
+  --tw-text-inverse: 11 35 65;
+  --tw-border-subtle: 42 63 94;
+  --tw-gg-green-dark: 107 165 57;
+  --tw-gg-green-mid: 143 209 79;
+  --tw-gg-green-light: 168 230 93;
+  --tw-cv-charcoal: 216 222 227;
+  --tw-cv-gold: 212 168 78;
+  --tw-cv-dark: 21 45 74;
+}
+
+/* ===== 5) PRODUCT PALETTES (GG / CV) ====================================== */
+:root {
+  --gg-green-dark: var(--aristeus-secondary);
+  --gg-green-mid: var(--aristeus-green);
+  --gg-green-light: var(--aristeus-green);
+  --gg-gradient: linear-gradient(135deg, var(--aristeus-secondary), var(--aristeus-green));
+  --cv-charcoal: var(--technical-graphite);
+  --cv-gold: #B8963E;
+  --cv-dark: var(--aristeus-navy);
+  --cv-gradient: linear-gradient(135deg, var(--technical-graphite), #B8963E);
+}
+
+.dark {
+  --gg-green-dark: var(--aristeus-green);
+  --gg-green-mid: var(--aristeus-green-soft);
+  --gg-green-light: var(--aristeus-green-bright);
+  --gg-gradient: linear-gradient(135deg, var(--aristeus-green), var(--aristeus-green-soft));
+  --cv-charcoal: var(--mist-gray);
+  --cv-gold: var(--aristeus-gold-soft);
+  --cv-dark: var(--aristeus-navy-soft);
+  --cv-gradient: linear-gradient(135deg, var(--aristeus-navy-soft), var(--aristeus-gold-soft));
+}
+
+/* ===== 6) DATA SEMANTICS =================================================== */
+/* Colores de visualización de datos (masa seca, deltas). Excepción de datos,
+ * no de marca: se alinean en tono a la paleta pero son semánticos propios.   */
+:root {
+  --densidad-verde: #059669;
+  --densidad-muerta: #78350f;
+  --densidad-total: #111827;
+  --delta-up: #15803d;
+  --delta-down: #b91c1c;
+}
+
+.dark {
+  --densidad-verde: #34d399;
+  --densidad-muerta: #f5b066;
+  --densidad-total: var(--mineral-white);
+  --delta-up: #4ade80;
+  --delta-down: #f87171;
+}
+
+/* ===== 7) STATUS COLORS — EXCEPCIÓN DOCUMENTADA ============================ */
+/* Errores/éxito/warning del UX. Fuera de la paleta core de marca,
+ * mantenidos como tokens de estado.                                          */
+:root {
+  --status-error: #dc2626;
+  --status-error-mid: #b91c1c;
+  --status-error-dark: #991b1b;
+  --status-error-line: #fca5a5;
+  --status-error-hover-bg: #fee2e2;
+  --status-error-soft-bg: #fef2f2;
+  --status-success: #16a34a;
+  --status-success-dot: #22c55e;
+  --status-success-soft-bg: #f0fdf4;
+  --status-success-row: #e7f6ea;
+  --status-warning: #d97706;
+  --status-warning-bright: #f59e0b;
+  --status-warning-soft-bg: #fefce8;
+
+  /* Texto / línea neutros (fuera de la escala core) */
+  --text-muted: #6b7280;
+  --text-faint: #9ca3af;
+  --neutral-line: #d1d5db;
+  --neutral-cell: #edf0f2;
+}
+
+/* ===== 7b) MAP / OVERLAY / SCrim — excepción de superficie ================= */
+:root {
+  --map-bg: #0b1f0b;
+  --float-bg: rgba(255, 255, 255, 0.94);
+  --float-bg-soft: rgba(255, 255, 255, 0.92);
+  --map-hint-bg: rgba(20, 35, 20, 0.92);
+  --map-hint-title: #fff;
+  --map-hint-text: #e7f6e3;
+  --scrim: rgba(17, 24, 39, 0.45);
+  --cov-success: #22c55e;
+  --cov-error: #ef4444;
+  --cov-neutral: #6b7280;
+}
+
+/* ===== 8) TYPOGRAPHY & COMPONENTS ========================================== */
+:root {
+  --font-heading: 'Space Grotesk', sans-serif;
+  --font-body: 'IBM Plex Sans', sans-serif;
+  --font-data: 'JetBrains Mono', monospace;
+
+  --button-primary-bg: var(--aristeus-navy);
+  --button-primary-text: var(--mineral-white);
+  --button-primary-hover: var(--aristeus-navy-soft);
+  --button-secondary-bg: var(--aristeus-green);
+  --button-secondary-text: var(--mineral-white);
+  --button-secondary-hover: #5a8a2f;
+  --button-ghost-hover: var(--bg-secondary);
+  --button-outline-border: var(--border-subtle);
+
+  --input-bg: var(--bg-card);
+  --input-border: var(--border-subtle);
+  --input-border-focus: var(--gg-green-mid);
+  --input-text: var(--text-primary);
+  --input-placeholder: var(--text-secondary);
+
+  --card-bg: var(--bg-card);
+  --card-border: var(--border-subtle);
+  --card-shadow: 0 18px 40px rgba(11, 35, 65, 0.08);
+
+  --sidebar-width: 232px;
+  --sidebar-collapsed-width: 64px;
+  --topbar-height: 48px;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  --transition-fast: 150ms ease;
+  --transition-base: 300ms ease;
+  --transition-slow: 500ms ease;
+
+  --focus-ring: 0 0 0 2px var(--gg-green-mid);
+}
+
+.dark {
+  --button-primary-bg: var(--aristeus-green);
+  --button-primary-text: var(--aristeus-navy);
+  --button-primary-hover: var(--aristeus-green-bright);
+  --button-secondary-bg: var(--aristeus-navy);
+  --button-secondary-text: var(--mineral-white);
+  --button-secondary-hover: var(--aristeus-navy-soft);
+  --button-ghost-hover: var(--bg-secondary);
+  --button-outline-border: var(--border-subtle);
+
+  --card-shadow: 0 18px 40px var(--aristeus-navy-35);
+}

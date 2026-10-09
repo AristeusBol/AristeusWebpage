@@ -9,6 +9,8 @@ interface Props {
   notifCount: number;
 }
 
+import { useTheme } from '../hooks/useTheme';
+
 function iniciales(nombre: string, email: string): string {
   const base = nombre.trim() || email.split('@')[0].replace(/[._-]+/g, ' ');
   const partes = base.split(/\s+/).filter(Boolean);
@@ -20,6 +22,7 @@ export default function Topbar({
   fincas, finca, onFinca, cargando,
   nombre, email, onSalir, notifCount,
 }: Props) {
+  const { theme, toggleTheme } = useTheme();
   return (
     <header className="topbar2">
       <label className="pill-select">
@@ -31,6 +34,16 @@ export default function Topbar({
           ))}
         </select>
       </label>
+
+      <button
+        type="button"
+        className="icon-btn"
+        onClick={toggleTheme}
+        title={theme === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'}
+        aria-label={theme === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'}
+      >
+        {theme === 'light' ? '🌙' : '☀️'}
+      </button>
 
       <span className="icon-btn" title={`${notifCount} potreros en la estancia`} aria-label={`${notifCount} potreros en la estancia`}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">

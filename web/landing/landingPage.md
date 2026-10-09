@@ -53,41 +53,62 @@ STACK TÉCNICO
 IDENTIDAD VISUAL — EXTRAÍDA DE LOS LOGOS REALES
 ═══════════════════════════════════════════════════════════════
 
-PALETA PRINCIPAL (Aristeus corporativa):
-  --aristeus-navy:     #1B2A4A   (azul marino del logo - primario)
-  --aristeus-green:    #7AB929   (verde lima del logo - secundario)
-  --bg-primary:        #0D1117   (fondo principal oscuro)
-  --bg-secondary:      #161B22   (fondo cards/secciones alternas)
-  --bg-card:           #1C2333   (fondo glassmorphism cards)
-  --text-primary:      #E8ECF1   (texto principal)
-  --text-secondary:    #8B949E   (texto secundario)
-  --border-subtle:     #30363D   (bordes sutiles)
+PALETA PRINCIPAL (Aristeus corporativa — fuente de verdad única en web/shared/brand.tokens.css):
+  --aristeus-navy:     #0B2341   (azul marino del logo - primario)
+  --aristeus-green:    #6BA539   (verde lima del logo - secundario)
+  --aristeus-secondary:#355E3B   (verde oscuro - acento secundario)
+  --technical-graphite:#2B2F36   (grafito - texto sobre claro)
+  --mineral-white:     #F5F7F4   (blanco mineral - texto sobre oscuro)
+  --mist-gray:         #D8DEE3   (gris niebla - bordes/fondos sutiles)
+
+  SYNTÉTIC semantic (LIGHT):
+  --bg-primary:        #F5F7F4   (fondo principal claro)
+  --bg-secondary:      #D8DEE3   (fondos cards/secciones alternas)
+  --bg-card:           #FFFFFF   (glassmorphism cards)
+  --text-primary:      #2B2F36   (texto principal)
+  --text-secondary:    #355E3B   (texto secundario)
+  --text-inverse:      #F5F7F4   (texto sobre acentos oscuros)
+  --border-subtle:     #D8DEE3   (bordes sutiles)
+
+  Semantic DARK (derivada de la paleta oficial, navy como base):
+  --bg-primary:        #0B2341   (navy)
+  --bg-secondary:      #152D4A   (navy-soft)
+  --bg-card:           #13203A   (navy-card)
+  --text-primary:      #F5F7F4   (mineral-white)
+  --text-secondary:    #6BA539   (verde como acento)
+  --border-subtle:     #2A3F5E   (navy-border)
+
+  Variantes derivadas por opacidad/hover:
+  --aristeus-navy-soft: #152D4A  / --aristeus-navy-card: #13203A / --aristeus-navy-border: #2A3F5E
+  --aristeus-green-soft: #8FD14F / --aristeus-green-bright: #A8E65D
+  --aristeus-gold-soft: #D4A84E
 
 PALETA GRASS GAUGE (secciones del producto pastoreo):
-  --gg-green-dark:     #1B7A2B   (verde bosque)
-  --gg-green-mid:      #4CAF50   (verde medio)
-  --gg-green-light:    #7AB929   (verde lima)
-  --gg-gradient:       linear-gradient(135deg, #1B7A2B, #7AB929)
+  --gg-green-dark:     #355E3B   (aristeus-secondary)
+  --gg-green-mid:      #6BA539   (aristeus-green)
+  --gg-green-light:    #6BA539   (en dark: #A8E65D)
+  --gg-gradient:       linear-gradient(135deg, #355E3B, #6BA539)
 
 PALETA CATTLEVISION (secciones del producto pesaje):
-  --cv-charcoal:       #2C3E3E   (gris carbón)
+  --cv-charcoal:       #2B2F36   (technical-graphite)
   --cv-gold:           #B8963E   (dorado/ocre)
-  --cv-dark:           #1A2424   (fondo oscuro tech)
-  --cv-gradient:       linear-gradient(135deg, #2C3E3E, #B8963E)
+  --cv-dark:           #0B2341   (aristeus-navy)
+  --cv-gradient:       linear-gradient(135deg, #2B2F36, #B8963E)
 
 TIPOGRAFÍA:
   --font-heading: 'Space Grotesk', sans-serif  (tech, precisa)
-  --font-body: 'Inter', sans-serif             (legible, moderna)
+  --font-body: 'IBM Plex Sans', sans-serif     (legible, moderna)
   --font-data: 'JetBrains Mono', monospace     (datos, métricas)
 
 ESTILO GENERAL:
-  - Dark mode predominante
+  - Light mode por defecto + dark mode derivado (toggle, preferencia guardada)
   - Glassmorphism sutil: background rgba + backdrop-blur + border sutil
   - Gradientes suaves para acentos
-  - Cards con borde sutil (#30363D) y hover glow del color del producto
-  - Imágenes con overlay oscuro (bg-primary con 60-70% opacidad)
+  - Cards con borde sutil (--border-subtle) y hover glow del color del producto
+  - Imágenes con overlay oscuro (--aristeus-navy-35 / scrim con 60-70% opacidad)
   - Animaciones sobrias con Intersection Observer (fade-up, fade-in)
   - Transiciones suaves en hover (300ms ease)
+  - REGLA DE MARCA: no introducir colores nuevos salvo variantes de opacidad o estados hover.
 
 ═══════════════════════════════════════════════════════════════
 ESTRUCTURA DE CARPETAS
@@ -166,7 +187,7 @@ HOME PAGE — SECCIONES EN ORDEN
 SECCIÓN 1: HERO
 ─────────────────
 - Fondo: imagen satelital de pastizales vista desde arriba,
-  oscurecida con overlay gradient (from #0D1117/80% to #0D1117/40%)
+  oscurecida con overlay gradient (desde var(--aristeus-navy-35) a 25% opacidad)
 - Esquina superior: Nav con logo Aristeus (ícono + texto),
   menú (Inicio, Productos, Nosotros, Contacto), switch ES/EN,
   botón CTA "Solicitar Demo"
@@ -179,7 +200,7 @@ SECCIÓN 1: HERO
     Machine Learning para que cada hectárea rinda al máximo
     sin degradar tu tierra"
   - Dos botones:
-    - Primario (verde #7AB929): "Solicita tu análisis gratuito"
+    - Primario (verde --aristeus-green): "Solicita tu análisis gratuito"
     - Secundario (outline blanco): "Ver cómo funciona ↓"
 - Abajo del hero: barra de métricas horizontal con glassmorphism:
   "10,000+ ha analizadas" | "94% precisión" | "3 continentes"
@@ -187,7 +208,7 @@ SECCIÓN 1: HERO
 
 SECCIÓN 2: EL PROBLEMA
 ─────────────────────────
-- Fondo: #161B22
+- Fondo: var(--bg-secondary)
 - SectionTitle: "El sobrepastoreo está destruyendo las tierras
   ganaderas de Bolivia"
 - Layout: dos columnas
@@ -203,7 +224,7 @@ SECCIÓN 2: EL PROBLEMA
 
 SECCIÓN 3: NUESTROS PRODUCTOS
 ────────────────────────────────
-- Fondo: #0D1117
+- Fondo: var(--bg-primary)
 - SectionTitle: "Dos soluciones. Un objetivo: ganadería de precisión basada en datos."
 - Layout: dos cards grandes lado a lado
 
@@ -233,7 +254,7 @@ SECCIÓN 3: NUESTROS PRODUCTOS
 
 SECCIÓN 4: CÓMO FUNCIONA GRASS GAUGE (producto principal)
 ──────────────────────────────────────────────────────────────
-- Fondo: #161B22
+- Fondo: var(--bg-secondary)
 - SectionTitle: "De la imagen aérea a tu plan de pastoreo
   en 3 pasos"
 - Layout: 3 cards conectadas con línea/flecha horizontal
@@ -253,7 +274,7 @@ SECCIÓN 4: CÓMO FUNCIONA GRASS GAUGE (producto principal)
 
 SECCIÓN 5: DEMO VISUAL — MAPA INTERACTIVO
 ────────────────────────────────────────────
-- Fondo: #0D1117
+- Fondo: var(--bg-primary)
 - SectionTitle: "Visualiza tu campo como nunca antes"
 - Mapa Leaflet ocupando ~70% del ancho, centrado en
   coordenadas de Santa Cruz, Bolivia (-17.78, -63.18)
@@ -272,7 +293,7 @@ SECCIÓN 5: DEMO VISUAL — MAPA INTERACTIVO
 
 SECCIÓN 6: BENEFICIOS TANGIBLES
 ─────────────────────────────────
-- Fondo: #161B22
+- Fondo: var(--bg-secondary)
 - SectionTitle: "Resultados que impactan tu operación"
 - 4 MetricCards en grid (2x2 desktop, 1 col mobile):
   - Card 1: número "+40%" | "aumento en capacidad de carga"
@@ -289,7 +310,7 @@ SECCIÓN 6: BENEFICIOS TANGIBLES
 
 SECCIÓN 7: TECNOLOGÍA (sin saturar)
 ──────────────────────────────────────
-- Fondo: #0D1117
+- Fondo: var(--bg-primary)
 - SectionTitle: "Tecnología de precisión para el campo"
 - Layout: 3 columnas minimalistas
   - Columna 1: ícono dron + "Sensores Multiespectrales y RGB"
@@ -304,7 +325,7 @@ SECCIÓN 7: TECNOLOGÍA (sin saturar)
 
 SECCIÓN 8: RESPALDO
 ─────────────────────
-- Fondo: #161B22
+- Fondo: var(--bg-secondary)
 - SectionTitle: "Respaldados por"
 - Grid de logos en escala de grises (placeholders por ahora):
   - Incubadoras
@@ -313,7 +334,7 @@ SECCIÓN 8: RESPALDO
 
 SECCIÓN 9: CTA FINAL
 ───────────────────────
-- Fondo: gradient sutil desde #0D1117 hacia #1B2A4A
+- Fondo: gradient sutil desde var(--bg-primary) hacia var(--aristeus-navy)
 - Headline: "Solicita tu análisis gratuito de 100 hectáreas"
 - Subheadline: "Sin compromiso. Recibe un reporte de biomasa
   de tu campo en 72 horas."
@@ -326,11 +347,11 @@ SECCIÓN 9: CTA FINAL
   - Departamento/Región (dropdown: Santa Cruz, Beni, Pando, Otro)
   - Mensaje (opcional, textarea)
   - Checkbox: "Acepto ser contactado por Aristeus"
-  - Botón submit verde (#7AB929): "Solicitar Análisis Gratuito"
+  - Botón submit verde (--aristeus-green): "Solicitar Análisis Gratuito"
 
 FOOTER:
 ─────────
-- Fondo: #0A0E14
+- Fondo: var(--aristeus-navy)
 - Logo Aristeus (versión clara)
 - Columnas:
   - Productos: Grass Gauge, CattleVision
@@ -456,12 +477,12 @@ astro.config.mjs:
 
 tailwind.config.mjs:
   - extend colors con todas las variables de la paleta
-  - extend fontFamily con Space Grotesk, Inter, JetBrains Mono
+  - extend fontFamily con Space Grotesk, IBM Plex Sans, JetBrains Mono
   - extend animation para fade-up, fade-in
 
 global.css:
-  - CSS custom properties con toda la paleta
-  - Importar Google Fonts (Space Grotesk, Inter, JetBrains Mono)
+  - CSS custom properties con toda la paleta (ver web/shared/brand.tokens.css)
+  - Importar Google Fonts (Space Grotesk, IBM Plex Sans, JetBrains Mono)
   - Scrollbar personalizada oscura
   - Selection color con verde Aristeus
   - Smooth scroll en html

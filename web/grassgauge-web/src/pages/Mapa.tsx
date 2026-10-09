@@ -594,11 +594,11 @@ export default function Mapa() {
                         <div className="comp-strip-vals">
                           <span><em>Área:</em> {parcelaDet.area_ha != null ? `${Number(parcelaDet.area_ha).toLocaleString('es-AR', { maximumFractionDigits: 2 })} ha` : '—'}</span>
                           <span className="sep">·</span>
-                          <span><em>Verde:</em> <span style={{ color: '#059669' }}>{fmt1(parcelaDet.t_ha_verde ?? 0)} t/ha</span> <small>({fmt0(pctV)}%)</small></span>
+                          <span><em>Verde:</em> <span style={{ color: 'var(--densidad-verde)' }}>{fmt1(parcelaDet.t_ha_verde ?? 0)} t/ha</span> <small>({fmt0(pctV)}%)</small></span>
                           <span className="sep">·</span>
-                          <span><em>Muerta:</em> <span style={{ color: '#78350f' }}>{fmt1(parcelaDet.t_ha_muerta ?? 0)} t/ha</span> <small>({fmt0(pctM)}%)</small></span>
+                          <span><em>Muerta:</em> <span style={{ color: 'var(--densidad-muerta)' }}>{fmt1(parcelaDet.t_ha_muerta ?? 0)} t/ha</span> <small>({fmt0(pctM)}%)</small></span>
                           <span className="sep">·</span>
-                          <span><em>Total:</em> <span style={{ color: '#111827' }}>{fmt1(parcelaDet.t_ha_total)} t/ha</span></span>
+                          <span><em>Total:</em> <span style={{ color: 'var(--densidad-total)' }}>{fmt1(parcelaDet.t_ha_total)} t/ha</span></span>
                           <span className="sep">·</span>
                           <small className="muted">{parcelaDet.n_puntos != null ? `${parcelaDet.n_puntos} pts` : ''}</small>
                         </div>

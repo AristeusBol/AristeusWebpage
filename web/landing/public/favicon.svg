@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
   <style>
-    .navy { fill: #1B2A4A; }
-    .green { fill: #7AB929; }
+    .navy { fill: #0B2341; }
+    .green { fill: #6BA539; }
   </style>
   <!-- Stylized A as precision compass -->
   <path class="navy" d="M16 2L2 30H8L12 20H20L24 30H30L16 2ZM14 14L16 8L18 14H14Z"/>

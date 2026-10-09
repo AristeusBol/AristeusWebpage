@@ -11,6 +11,7 @@ import {
   encuadrar, tilesUrl, transformRequestTiles,
 } from '../lib/mapCommon';
 import type { PotreroFeature } from './MapaMasaSeca';
+import { MAP_CHROME } from '../lib/mapPalette';
 
 export interface ParcelaFeature {
   type: 'Feature';
@@ -114,13 +115,13 @@ export default function GestionMapa({
       if (!map.getLayer('g-potreros-fill')) {
         if (!pot) map.addSource('g-potreros', { type: 'geojson', data: fcPot });
         else pot.setData(fcPot);
-        map.addLayer({ id: 'g-potreros-fill', type: 'fill', source: 'g-potreros', paint: { 'fill-color': '#ffffff', 'fill-opacity': 0.06 } });
-        map.addLayer({ id: 'g-potreros-line', type: 'line', source: 'g-potreros', paint: { 'line-color': '#ffffff', 'line-width': 2.5, 'line-opacity': 1 } });
-        map.addLayer({ id: 'g-potreros-sel', type: 'line', source: 'g-potreros', filter: selPot, paint: { 'line-color': '#facc15', 'line-width': 4 } });
+        map.addLayer({ id: 'g-potreros-fill', type: 'fill', source: 'g-potreros', paint: { 'fill-color': MAP_CHROME.potreroFill, 'fill-opacity': 0.06 } });
+        map.addLayer({ id: 'g-potreros-line', type: 'line', source: 'g-potreros', paint: { 'line-color': MAP_CHROME.potreroLine, 'line-width': 2.5, 'line-opacity': 1 } });
+        map.addLayer({ id: 'g-potreros-sel', type: 'line', source: 'g-potreros', filter: selPot, paint: { 'line-color': MAP_CHROME.seleccionAmarillo, 'line-width': 4 } });
         map.addLayer({
           id: 'g-potreros-label', type: 'symbol', source: 'g-potreros',
           layout: { 'text-field': ['get', 'etiqueta'], 'text-size': 12, 'text-allow-overlap': true },
-          paint: { 'text-color': '#fff', 'text-halo-color': 'rgba(0,0,0,0.65)', 'text-halo-width': 1.5 },
+          paint: { 'text-color': MAP_CHROME.textoSatelite, 'text-halo-color': MAP_CHROME.halo, 'text-halo-width': 1.5 },
         });
       } else {
         pot?.setData(fcPot);
@@ -135,12 +136,12 @@ export default function GestionMapa({
       if (!map.getLayer('g-exclusiones-fill')) {
         if (!exc) map.addSource('g-exclusiones', { type: 'geojson', data: fcExc });
         else exc.setData(fcExc);
-        map.addLayer({ id: 'g-exclusiones-fill', type: 'fill', source: 'g-exclusiones', paint: { 'fill-color': '#dc2626', 'fill-opacity': 0.35 } });
-        map.addLayer({ id: 'g-exclusiones-line', type: 'line', source: 'g-exclusiones', paint: { 'line-color': '#ffffff', 'line-width': 2.5, 'line-opacity': 1 } });
+        map.addLayer({ id: 'g-exclusiones-fill', type: 'fill', source: 'g-exclusiones', paint: { 'fill-color': MAP_CHROME.exclusionesRelleno, 'fill-opacity': 0.35 } });
+        map.addLayer({ id: 'g-exclusiones-line', type: 'line', source: 'g-exclusiones', paint: { 'line-color': MAP_CHROME.potreroLine, 'line-width': 2.5, 'line-opacity': 1 } });
         map.addLayer({
           id: 'g-exclusiones-label', type: 'symbol', source: 'g-exclusiones',
           layout: { 'text-field': ['get', 'etiqueta'], 'text-size': 11, 'text-allow-overlap': true },
-          paint: { 'text-color': '#fecaca', 'text-halo-color': 'rgba(0,0,0,0.7)', 'text-halo-width': 1.5 },
+          paint: { 'text-color': MAP_CHROME.exclusionesTexto, 'text-halo-color': MAP_CHROME.haloFuerte, 'text-halo-width': 1.5 },
         });
       } else {
         exc?.setData(fcExc);
@@ -151,13 +152,13 @@ export default function GestionMapa({
       if (!map.getLayer('g-parcelas-fill')) {
         if (!par) map.addSource('g-parcelas', { type: 'geojson', data: fcPar });
         else par.setData(fcPar);
-        map.addLayer({ id: 'g-parcelas-fill', type: 'fill', source: 'g-parcelas', paint: { 'fill-color': '#facc15', 'fill-opacity': 0 } });
-        map.addLayer({ id: 'g-parcelas-line', type: 'line', source: 'g-parcelas', filter: noSelPar, paint: { 'line-color': '#e2e8f0', 'line-width': 1, 'line-opacity': 0.9 } });
-        map.addLayer({ id: 'g-parcelas-sel', type: 'line', source: 'g-parcelas', filter: selPar, paint: { 'line-color': '#22d3ee', 'line-width': 3 } });
+        map.addLayer({ id: 'g-parcelas-fill', type: 'fill', source: 'g-parcelas', paint: { 'fill-color': MAP_CHROME.seleccionAmarillo, 'fill-opacity': 0 } });
+        map.addLayer({ id: 'g-parcelas-line', type: 'line', source: 'g-parcelas', filter: noSelPar, paint: { 'line-color': MAP_CHROME.parcelaLinea, 'line-width': 1, 'line-opacity': 0.9 } });
+        map.addLayer({ id: 'g-parcelas-sel', type: 'line', source: 'g-parcelas', filter: selPar, paint: { 'line-color': MAP_CHROME.seleccionCyan, 'line-width': 3 } });
         map.addLayer({
           id: 'g-parcelas-label', type: 'symbol', source: 'g-parcelas',
           layout: { 'text-field': ['get', 'etiqueta'], 'text-size': 11, 'text-allow-overlap': true },
-          paint: { 'text-color': '#fefce8', 'text-halo-color': 'rgba(0,0,0,0.7)', 'text-halo-width': 1.5 },
+          paint: { 'text-color': MAP_CHROME.textoParcela, 'text-halo-color': MAP_CHROME.haloFuerte, 'text-halo-width': 1.5 },
         });
       } else {
         par?.setData(fcPar);
@@ -169,9 +170,9 @@ export default function GestionMapa({
       if (!map.getLayer('g-dibujo-fill')) {
         if (!dib) map.addSource('g-dibujo', { type: 'geojson', data: dibujoFC });
         else dib.setData(dibujoFC);
-        map.addLayer({ id: 'g-dibujo-fill', type: 'fill', source: 'g-dibujo', paint: { 'fill-color': '#22c55e', 'fill-opacity': 0.25 } });
-        map.addLayer({ id: 'g-dibujo-line', type: 'line', source: 'g-dibujo', paint: { 'line-color': '#22c55e', 'line-width': 2 } });
-        map.addLayer({ id: 'g-dibujo-pt', type: 'circle', source: 'g-dibujo', paint: { 'circle-color': '#22c55e', 'circle-radius': 5, 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } });
+        map.addLayer({ id: 'g-dibujo-fill', type: 'fill', source: 'g-dibujo', paint: { 'fill-color': MAP_CHROME.dibujoVerde, 'fill-opacity': 0.25 } });
+        map.addLayer({ id: 'g-dibujo-line', type: 'line', source: 'g-dibujo', paint: { 'line-color': MAP_CHROME.dibujoVerde, 'line-width': 2 } });
+        map.addLayer({ id: 'g-dibujo-pt', type: 'circle', source: 'g-dibujo', paint: { 'circle-color': MAP_CHROME.dibujoVerde, 'circle-radius': 5, 'circle-stroke-color': MAP_CHROME.textoSatelite, 'circle-stroke-width': 2 } });
       } else {
         dib?.setData(dibujoFC);
       }

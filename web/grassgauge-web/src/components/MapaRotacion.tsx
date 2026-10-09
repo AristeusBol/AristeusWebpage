@@ -10,6 +10,7 @@ import {
   encuadrar, transformRequestTiles,
 } from '../lib/mapCommon';
 import type { ExclusionOverlayFeature, PotreroFeature } from './MapaMasaSeca';
+import { MAP_CHROME, MAP_ESTADOS } from '../lib/mapPalette';
 
 export interface MapaRotacionParcelaFeature {
   type: 'Feature';
@@ -189,7 +190,7 @@ export default function MapaRotacion({
       const pot = map.getSource('rot-potreros') as GeoJSONSource | undefined;
       if (!map.getLayer('rot-potreros-fill')) {
         if (!pot) map.addSource('rot-potreros', { type: 'geojson', data: fcPot });
-        map.addLayer({ id: 'rot-potreros-fill', type: 'fill', source: 'rot-potreros', paint: { 'fill-color': '#233D39', 'fill-opacity': 1 } });
+        map.addLayer({ id: 'rot-potreros-fill', type: 'fill', source: 'rot-potreros', paint: { 'fill-color': MAP_CHROME.potreroFillOscuro, 'fill-opacity': 1 } });
       } else {
         pot?.setData(fcPot);
       }
@@ -204,29 +205,29 @@ export default function MapaRotacion({
             'fill-color': [
               'match',
               ['get', 'estado'],
-              'critico', '#ef4444',
-              'desarrollo', '#facc15',
-              'optimo', '#22c55e',
-              'maduro', '#8b5cf6',
-              'pasado', '#86198f',
-              '#9ca3af',
+              'critico', MAP_ESTADOS.critico,
+              'desarrollo', MAP_ESTADOS.desarrollo,
+              'optimo', MAP_ESTADOS.optimo,
+              'maduro', MAP_ESTADOS.maduro,
+              'pasado', MAP_ESTADOS.pasado,
+              MAP_ESTADOS.sinDato,
             ],
             'fill-opacity': 0.6,
           },
         });
         map.addLayer({
           id: 'rot-parcelas-line', type: 'line', source: 'rot-parcelas',
-          paint: { 'line-color': '#e2e8f0', 'line-width': 1, 'line-opacity': 0.9 },
+          paint: { 'line-color': MAP_CHROME.parcelaLinea, 'line-width': 1, 'line-opacity': 0.9 },
         });
         map.addLayer({
           id: 'rot-parcelas-sel', type: 'line', source: 'rot-parcelas',
           filter: selFilter,
-          paint: { 'line-color': '#22d3ee', 'line-width': 3 },
+          paint: { 'line-color': MAP_CHROME.seleccionCyan, 'line-width': 3 },
         });
         map.addLayer({
           id: 'rot-parcelas-label', type: 'symbol', source: 'rot-parcelas', minzoom: 15,
           layout: { 'text-field': ['get', 'nombre'], 'text-size': 11, 'text-allow-overlap': false },
-          paint: { 'text-color': '#fefce8', 'text-halo-color': 'rgba(0,0,0,0.7)', 'text-halo-width': 1.5 },
+          paint: { 'text-color': MAP_CHROME.textoParcela, 'text-halo-color': MAP_CHROME.haloFuerte, 'text-halo-width': 1.5 },
         });
       } else {
         par?.setData(fcPar);
@@ -234,7 +235,7 @@ export default function MapaRotacion({
       }
 
       if (!map.getLayer('rot-potreros-line')) {
-        map.addLayer({ id: 'rot-potreros-line', type: 'line', source: 'rot-potreros', paint: { 'line-color': '#ffffff', 'line-width': 2.5, 'line-opacity': 1 } });
+        map.addLayer({ id: 'rot-potreros-line', type: 'line', source: 'rot-potreros', paint: { 'line-color': MAP_CHROME.potreroLine, 'line-width': 2.5, 'line-opacity': 1 } });
       }
       // Exclusiones: blanco sólido encima de parcelas/potreros, debajo de
       // líneas y etiquetas (igual que en los demás mapas, acá sin overlay).
@@ -247,7 +248,7 @@ export default function MapaRotacion({
           map.addLayer(
             {
               id: 'rot-exclusiones-fill', type: 'fill', source: 'rot-exclusiones',
-              paint: { 'fill-color': '#ffffff', 'fill-opacity': 1 },
+              paint: { 'fill-color': MAP_CHROME.potreroFill, 'fill-opacity': 1 },
             },
             map.getLayer('rot-potreros-line') ? 'rot-potreros-line' : undefined,
           );
@@ -262,7 +263,7 @@ export default function MapaRotacion({
         map.addLayer({
           id: 'rot-potreros-label', type: 'symbol', source: 'rot-potreros',
           layout: { 'text-field': ['get', 'nombre'], 'text-size': 12, 'text-allow-overlap': true },
-          paint: { 'text-color': '#ffffff', 'text-halo-color': 'rgba(0,0,0,0.65)', 'text-halo-width': 1.5 },
+          paint: { 'text-color': MAP_CHROME.textoSatelite, 'text-halo-color': MAP_CHROME.halo, 'text-halo-width': 1.5 },
         });
       }
     } catch (e) {

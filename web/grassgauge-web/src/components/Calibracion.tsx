@@ -190,7 +190,7 @@ export default function Calibracion() {
             <MapaPunto features={detalle?.features ?? []} punto={punto} onPunto={marcarPunto} />
           </div>
           {punto && (
-            <span className="muted small" style={{ color: '#15803d', fontWeight: 600 }}>
+            <span className="muted small" style={{ color: 'var(--delta-up)', fontWeight: 600 }}>
               ✓ Punto válido: {punto.lat.toFixed(6)}, {punto.lon.toFixed(6)}
             </span>
           )}
