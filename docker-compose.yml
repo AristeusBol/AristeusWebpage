@@ -1,0 +1,37 @@
+services:
+  backend:
+    build:
+      context: ./grassgauge-api
+      dockerfile: Dockerfile
+    container_name: grassgauge-backend
+    environment:
+      DATABASE_URL: postgresql://admin_grassgauge:password_local_123@host.docker.internal:5433/grassgauge
+      POSTGRES_HOST: host.docker.internal
+      POSTGRES_PORT: "5433"
+      CORS_ORIGINS: "*"
+      ENV: development
+      SECRET_KEY: dev-secret-key-change-in-production-please-32chars
+      ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./grassgauge-api:/app
+      - /app/__pycache__
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: ./grassgauge-web
+      dockerfile: Dockerfile.dev
+    container_name: grassgauge-frontend
+    environment:
+      VITE_API_URL: ""
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    volumes:
+      - ./grassgauge-web:/app
+      - /app/node_modules
+      - /app/dist
+    command: npm run dev -- --host 0.0.0.0

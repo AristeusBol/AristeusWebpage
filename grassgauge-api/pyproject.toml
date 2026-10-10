@@ -12,6 +12,7 @@ dependencies = [
     "uvicorn",
     "sqlalchemy",
     "psycopg2-binary",
+    "psycopg",
     "pandas",
     "geopandas",
     "geoalchemy2",

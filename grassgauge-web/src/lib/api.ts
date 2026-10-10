@@ -387,17 +387,23 @@ export interface SubidaFotoResponse {
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getToken();
-  const res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(init.headers ?? {}),
-    },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(init.headers ?? {}),
+      },
+    });
+  } catch (err) {
+    // Error de red: backend caído, proxy mal configurado, CORS, etc.
+    const msg = err instanceof Error ? err.message : 'Error de red desconocido';
+    throw new Error(`No se pudo conectar al servidor: ${msg}. ¿Está el backend corriendo en el puerto 8001?`);
+  }
   if (res.status === 401) {
     forzarLogout();
-    // Dejar que el router redirija; lanzamos para que la UI lo maneje.
     throw new Error('No autenticado (401). Iniciá sesión de nuevo.');
   }
   if (!res.ok) {
@@ -407,6 +413,14 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       if (body?.detail) detail = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail);
     } catch {
       /* body no JSON */
+    }
+    // Mensajes más claros para errores comunes
+    if (res.status === 404) {
+      detail = `Endpoint no encontrado (404). Verificá que el backend esté corriendo y la ruta sea correcta.`;
+    } else if (res.status === 500) {
+      detail = `Error interno del servidor (500). Revisá los logs del backend.`;
+    } else if (res.status >= 500) {
+      detail = `Error del servidor (${res.status}). El backend podría estar caído.`;
     }
     throw new Error(detail);
   }
