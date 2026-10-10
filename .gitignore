@@ -1,0 +1,11 @@
+# Ignore build artifacts and large binary files
+**/bin/Debug/**/*.pdb
+**/bin/Release/**/*.pdb
+**/obj/**/*.pdb
+
+# .NET build outputs
+**/bin/
+**/obj/
+
+# Large native libraries
+**/runtimes/**/native/*.pdb
