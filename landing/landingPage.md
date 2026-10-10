@@ -203,7 +203,7 @@ SECCIÓN 1: HERO
     - Primario (verde --aristeus-green): "Solicita tu análisis gratuito"
     - Secundario (outline blanco): "Ver cómo funciona ↓"
 - Abajo del hero: barra de métricas horizontal con glassmorphism:
-  "10,000+ ha analizadas" | "94% precisión" | "3 continentes"
+  "10,000+ ha posibles de adquisición por día" | "93% precisión" | "1 modelo testeado en Bolivia"
   Números en font-data (monospace), animados con counter al entrar
 
 SECCIÓN 2: EL PROBLEMA
@@ -330,7 +330,7 @@ SECCIÓN 8: RESPALDO
 - Grid de logos en escala de grises (placeholders por ahora):
   - Incubadoras
   - Clientes piloto
-- Texto: "Más de 10,000 hectáreas analizadas en pilotos"
+- Texto: "Más de 10,000 hectáreas posibles de adquisición por día"
 
 SECCIÓN 9: CTA FINAL
 ───────────────────────
