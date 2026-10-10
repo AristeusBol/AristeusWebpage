@@ -1,11 +1,46 @@
-# Ignore build artifacts and large binary files
-**/bin/Debug/**/*.pdb
-**/bin/Release/**/*.pdb
-**/obj/**/*.pdb
+# Dependencias
+node_modules/
 
-# .NET build outputs
-**/bin/
-**/obj/
+# Builds
+dist/
+build/
+.output/
+.astro/
 
-# Large native libraries
-**/runtimes/**/native/*.pdb
+# Env (solo .example se versiona)
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# Runtime / datos locales (volúmenes, uploads, calibración)
+grassgauge-api/datos/
+grassgauge-api/uploads/
+uploads/
+datos/
+
+# Agente local / caches
+.kilo/
+.cache/
+.parcel-cache/
+.netlify/
+
+# Logs
+*.log
+logs/
+
+# OS / editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
