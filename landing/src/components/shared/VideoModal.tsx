@@ -20,7 +20,14 @@ export default function VideoModal() {
       btn.addEventListener('click', openModal);
     });
 
-    // Escuchar tecla Escape
+    return () => {
+      buttons.forEach(btn => {
+        btn.removeEventListener('click', openModal);
+      });
+    };
+  }, []);
+
+  useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         closeModal();
@@ -32,10 +39,9 @@ export default function VideoModal() {
     }
 
     return () => {
-      buttons.forEach(btn => {
-        btn.removeEventListener('click', openModal);
-      });
-      document.removeEventListener('keydown', handleEscape);
+      if (isOpen) {
+        document.removeEventListener('keydown', handleEscape);
+      }
     };
   }, [isOpen]);
 
@@ -65,15 +71,15 @@ export default function VideoModal() {
           className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors p-2"
           aria-label="Cerrar modal"
         >
-          <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+          <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6.2253 4.81108C5.83477 4.42056 5.20161 4.42056 4.81108 4.81108C4.42056 5.20161 4.42056 5.83477 4.81108 6.2253L10.5858 12L4.81114 17.7747C4.42062 18.1652 4.42062 18.7984 4.81114 19.1889C5.20167 19.5794 5.83483 19.5794 6.22535 19.1889L12 13.4142L17.7747 19.1889C18.1652 19.5794 18.7984 19.5794 19.1889 19.1889C19.5794 18.7984 19.5794 18.1652 19.1889 17.7747L13.4142 12L19.189 6.2253C19.5795 5.83477 19.5795 5.20161 19.189 4.81108C18.7985 4.42056 18.1653 4.42056 17.7748 4.81108L12 10.5858L6.2253 4.81108Z" />
           </svg>
         </button>
         
         {/* Contenedor iframe responsive */}
         <div className="aspect-[16/9] w-full rounded-xl overflow-hidden shadow-2xl">
           <iframe
-            src="https://www.youtube.com/embed/hJrImU8QN2g?autoplay=1"
+            src={isOpen ? "https://www.youtube.com/embed/hJrImU8QN2g?autoplay=1" : ""}
             title="¿Quiénes somos? ¿Qué hacemos? - Aristeus"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
