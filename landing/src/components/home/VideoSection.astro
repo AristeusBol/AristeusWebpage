@@ -1,0 +1,78 @@
+---
+import SectionTitle from '../shared/SectionTitle.astro';
+import ScrollReveal from '../animations/ScrollReveal.astro';
+import Button from '../shared/Button.astro';
+import VideoModal from '../shared/VideoModal.tsx';
+---
+
+<section class="py-20 md:py-32 bg-bg-primary" id="video">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <ScrollReveal>
+      <SectionTitle 
+        title="Conoce a Aristeus"
+        align="center"
+        class="mb-4"
+      />
+    </ScrollReveal>
+    
+    <ScrollReveal animation="fade-up" delay={100}>
+      <p class="text-center text-text-secondary text-lg md:text-xl max-w-3xl mx-auto mb-12">
+        ¿Quiénes somos? ¿Qué hacemos?
+      </p>
+    </ScrollReveal>
+    
+    <ScrollReveal animation="fade-up" delay={200}>
+      <div class="max-w-5xl mx-auto">
+        <!-- Thumbnail con botón reproducir -->
+        <div class="relative group cursor-pointer aspect-[16/9] rounded-2xl overflow-hidden shadow-lg" data-open-video>
+          <!-- Thumbnail de YouTube -->
+          <img 
+            src="https://i.ytimg.com/vi/hJrImU8QN2g/hqdefault.jpg" 
+            alt="Video: ¿Quiénes somos? ¿Qué hacemos? - Aristeus"
+            class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+          />
+          
+          <!-- Overlay oscuro -->
+          <div class="absolute inset-0 bg-aristeus-navy-35 transition-opacity duration-300 group-hover:bg-aristeus-navy-20"></div>
+          
+          <!-- Botón reproduce central -->
+          <div class="absolute inset-0 flex items-center justify-center">
+            <div class="w-20 h-20 md:w-24 md:h-24 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:bg-white">
+              <!-- Icono play SVG -->
+              <svg 
+                class="w-8 h-8 md:w-10 md:h-10 text-aristeus-navy ml-1" 
+                fill="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
+          </div>
+          
+          <!-- Botón CTA verde superpuesto -->
+          <div class="absolute bottom-6 left-1/2 -translate-x-1/2 hidden sm:block">
+            <Button variant="primary" color="green" size="md" data-open-video>
+              Ver video
+            </Button>
+          </div>
+        </div>
+        
+        <!-- CTA móvil -->
+        <div class="mt-6 sm:hidden flex justify-center">
+          <Button variant="primary" color="green" size="md" class="w-full max-w-xs" data-open-video>
+            Ver video
+          </Button>
+        </div>
+        
+        <!-- Texto al pie -->
+        <p class="text-center text-text-tertiary text-sm mt-6">
+          Video oficial de Aristeus · YouTube
+        </p>
+      </div>
+    </ScrollReveal>
+  </div>
+  
+  <!-- Modal -->
+  <VideoModal client:visible />
+</section>
