@@ -70,7 +70,7 @@ export default function VideoModal() {
         </button>
         <div className="aspect-[16/9] w-full rounded-xl overflow-hidden shadow-2xl">
           <iframe
-            key={`youtube-${Date.now()}`}
+            key="youtube-hJrImU8QN2g"
             src="https://www.youtube.com/embed/hJrImU8QN2g?autoplay=1&rel=0&enablejsapi=1"
             title="¿Quiénes somos? ¿Qué hacemos? - Aristeus"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
