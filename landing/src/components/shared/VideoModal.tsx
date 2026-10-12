@@ -1,44 +1,38 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function VideoModal() {
   const [isOpen, setIsOpen] = useState(false);
 
-  const openModal = () => {
-    setIsOpen(true);
-    document.body.style.overflow = 'hidden';
-  };
-
-  const closeModal = () => {
-    setIsOpen(false);
-    document.body.style.overflow = '';
-  };
-
   useEffect(() => {
-    const buttons = document.querySelectorAll('[data-open-video]');
-    buttons.forEach((btn) => {
-      btn.addEventListener('click', openModal);
-    });
+    const handleDocumentClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-open-video]')) {
+        e.preventDefault();
+        setIsOpen(true);
+        document.body.style.overflow = 'hidden';
+      }
+    };
 
+    document.addEventListener('click', handleDocumentClick, { passive: true });
     return () => {
-      buttons.forEach((btn) => {
-        btn.removeEventListener('click', openModal);
-      });
+      document.removeEventListener('click', handleDocumentClick);
     };
   }, []);
 
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        closeModal();
+        setIsOpen(false);
+        document.body.style.overflow = '';
       }
     };
 
     if (isOpen) {
-      document.addEventListener('keydown', handleEscape, { once: true });
+      document.addEventListener('keydown', handleKeyDown);
     }
 
     return () => {
-      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
 
@@ -47,7 +41,10 @@ export default function VideoModal() {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={closeModal}
+      onClick={() => {
+        setIsOpen(false);
+        document.body.style.overflow = '';
+      }}
     >
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
       <div
@@ -55,7 +52,10 @@ export default function VideoModal() {
         onClick={(e) => e.stopPropagation()}
       >
         <button
-          onClick={closeModal}
+          onClick={() => {
+            setIsOpen(false);
+            document.body.style.overflow = '';
+          }}
           className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors p-2"
           aria-label="Cerrar modal"
         >
@@ -69,16 +69,15 @@ export default function VideoModal() {
           </svg>
         </button>
         <div className="aspect-[16/9] w-full rounded-xl overflow-hidden shadow-2xl">
-          {isOpen && (
-            <iframe
-              src="https://www.youtube.com/embed/hJrImU8QN2g?autoplay=1&rel=0"
-              title="¿Quiénes somos? ¿Qué hacemos? - Aristeus"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-              referrerPolicy="strict-origin-when-cross-origin"
-              className="w-full h-full"
-            />
-          )}
+          <iframe
+            key={`youtube-${Date.now()}`}
+            src="https://www.youtube.com/embed/hJrImU8QN2g?autoplay=1&rel=0&enablejsapi=1"
+            title="¿Quiénes somos? ¿Qué hacemos? - Aristeus"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+            className="w-full h-full"
+          />
         </div>
         <div className="mt-4 text-center">
           <a
