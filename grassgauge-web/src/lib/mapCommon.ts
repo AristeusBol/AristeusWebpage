@@ -85,6 +85,40 @@ export function tilesUrl(finca: string, fecha: string, tipo: TipoDensidad, uid: 
   return `${API_URL}/api/mapa/tiles/{z}/{x}/{y}.pbf?finca=${encodeURIComponent(finca)}&fecha=${encodeURIComponent(fecha)}&tipo_densidad=${tipo}&uid=${uid}`;
 }
 
+/** Pide al backend que precaliente en segundo plano los tiles del viewport.
+ *
+ * Best-effort y no bloqueante: si falla, el mapa funciona igual (solo paga el
+ * arranque en frío). Es idempotente: el backend deduplica y aplica TTL, así
+ * que llamarlo en cada apertura/paneo no repite trabajo.
+ */
+export function precalentarMasaSeca(
+  finca: string,
+  fecha: string,
+  tipo: TipoDensidad,
+  z: number,
+  bounds: BBox | null,
+): void {
+  if (!finca || !fecha) return;
+  const token = getToken();
+  const q = new URLSearchParams({
+    finca,
+    fecha,
+    tipo_densidad: tipo,
+    z: String(Math.max(0, Math.min(17, Math.round(z)))),
+  });
+  if (bounds) {
+    q.set('min_lon', String(bounds[0][0]));
+    q.set('min_lat', String(bounds[0][1]));
+    q.set('max_lon', String(bounds[1][0]));
+    q.set('max_lat', String(bounds[1][1]));
+  }
+  void fetch(`${API_URL}/api/mapa/precalentar?${q.toString()}`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    keepalive: true,
+  }).catch(() => { /* best-effort */ });
+}
+
 /** Inyecta el JWT en los tiles propios; el resto de URLs pasa intacto. */
 export function transformRequestTiles(url: string): RequestParameters {
   if (url.includes('/api/mapa/tiles/')) {

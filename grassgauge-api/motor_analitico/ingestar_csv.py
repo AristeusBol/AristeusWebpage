@@ -332,6 +332,78 @@ def _calcular_grupos(gdf):
     return ok, fallos
 
 
+def _grupos_celdas(gdf, tabla):
+    """Grupos (usuario_id, finca, fecha|None) del lote ingerido.
+
+    mapa_color: grupo por fecha (solo esa cambia). zonas_exclusion y
+    potreros_base: finca entera con todas las fechas, porque la geometría
+    de lotes/exclusiones recorta celdas de TODA la finca.
+    """
+    grupos = set()
+    cols = ["usuario_id", "finca"] + (["fecha"] if tabla == "mapa_color" else [])
+    for fila in gdf[cols].itertuples(index=False):
+        try:
+            uid_int = int(str(fila.usuario_id).strip())
+        except (ValueError, TypeError):
+            continue
+        finca_str = str(fila.finca).strip()
+        if tabla != "mapa_color":
+            grupos.add((uid_int, finca_str, None))
+            continue
+        crudo = fila.fecha
+        # pandas/numpy dan Timestamp (subclase de datetime, no de date) para
+        # las columnas fecha: si no se normaliza a date, el mismo grupo entra
+        # dos veces (Timestamp y date) y se precalcularia de más.
+        if crudo is None or (isinstance(crudo, float) and pd.isna(crudo)):
+            continue
+        if isinstance(crudo, date):
+            grupos.add((uid_int, finca_str, date(crudo.year, crudo.month, crudo.day)))
+            continue
+        try:
+            grupos.add((uid_int, finca_str, date.fromisoformat(str(crudo).strip()[:10])))
+        except ValueError:
+            continue
+    return sorted(grupos, key=lambda g: (g[0], g[1], str(g[2])))
+
+
+def _refrescar_celdas(gdf, tabla):
+    """Regenera `mapa_celdas` (celdas precalculadas del mapa) para los
+    grupos tocados y limpia la caché de tiles.
+
+    Si el precalculo falla se BORRAN las celdas del grupo: el endpoint cae
+    al cálculo on-the-fly (más lento, ~segundos) en vez de servir datos
+    viejos. Ver repositorios/celdas.py.
+    """
+    try:
+        from repositorios import celdas as repo_celdas
+    except Exception as e:  # noqa: BLE001
+        print(f"[!] No se pudo importar repositorios.celdas ({e}): el mapa usa el cálculo on-the-fly.")
+        return
+    try:
+        grupos = _grupos_celdas(gdf, tabla)
+        if not grupos:
+            return
+        print(f"[*] Regenerando celdas precalculadas de {len(grupos)} grupo(s)...")
+        for uid, finca, fecha in grupos:
+            etiqueta = f"'{finca}' {fecha.isoformat() if fecha else '(todas las fechas)'}"
+            try:
+                with engine.begin() as conn:
+                    n = repo_celdas.precalcular_grupo(conn, uid, finca, fecha)
+                    repo_celdas.invalidar_cache_tiles(conn, uid, finca, fecha)
+                print(f"[+] Celdas de {etiqueta}: {n}")
+            except Exception as e:  # noqa: BLE001
+                print(f"[!] Falló el precalculo de {etiqueta}: {e}")
+                try:
+                    with engine.begin() as conn:
+                        repo_celdas.limpiar_celdas(conn, uid, finca, fecha)
+                        repo_celdas.invalidar_cache_tiles(conn, uid, finca, fecha)
+                    print("    Sin celdas de ese grupo: el mapa calculará on-the-fly (lento pero correcto).")
+                except Exception as e2:  # noqa: BLE001
+                    print(f"    No se pudo limpiar el grupo: {e2}")
+    except Exception as e:  # noqa: BLE001
+        print(f"[!] No se pudo regenerar mapa_celdas: {e}. El mapa sigue con el cálculo on-the-fly.")
+
+
 def principal():
     parser = argparse.ArgumentParser(description="Ingesta simple: sube CSV solo si está completo y columnas coinciden")
     parser.add_argument(
@@ -485,6 +557,10 @@ def principal():
     except Exception as e:
         print(f"[X] La base de datos rechazó los datos. Verificá tipos y restricciones:\n{e}")
         return 1
+
+    # Celdas precalculadas del mapa (mapa_celdas): el mapa de masa seca lee
+    # esas geometrías ya recortadas en vez de construirlas por tile (~9s).
+    _refrescar_celdas(gdf, args.tabla)
 
     # Potreros y exclusiones son fijos: nada que calcular. El mapa dispara
     # el cálculo+guardado de cada grupo (usuario, potrero, fecha) ingerido.

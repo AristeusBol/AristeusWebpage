@@ -1,6 +1,11 @@
 from datetime import date
 from typing import Optional
 import json
+import math
+import random
+import threading
+import time
+from collections import OrderedDict
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Path
 from fastapi.responses import Response
@@ -8,6 +13,7 @@ from sqlalchemy import text
 
 from core.db import engine
 from core.seguridad import get_current_user_id
+from repositorios import celdas as repo_celdas
 
 router = APIRouter(prefix="/api/mapa", tags=["mapa-vector-tiles"])
 
@@ -18,53 +24,120 @@ COL_DENSIDAD = {
 }
 TIPOS_VALIDOS = set(COL_DENSIDAD.keys())
 
+# Media celda de 8m (~16x16m sobre grilla de ~10.4m): cubre las franjas de
+# borde donde la medición no llega hasta el límite del lote. El solape entre
+# vecinas no se nota con relleno sólido. (Se aplica al precalcular celdas
+# y, como fallback, en el query viejo de abajo.)
+MEDIO_LADO_M = 8
+BUF_M = 20  # buffer del tile viejo (solo fallback)
 
-@router.get("/tiles/{z}/{x}/{y}.pbf")
-def get_mapa_tile(
-    z: int = Path(..., ge=0, le=22, description="Zoom"),
-    x: int = Path(..., ge=0),
-    y: int = Path(..., ge=0),
-    finca: str = Query(..., description="Estancia exacta, ej: La Esperanza"),
-    fecha: date = Query(..., description="Fecha YYYY-MM-DD, ej: 2024-04-01"),
-    tipo_densidad: str = Query(..., description="verde | muerta | total"),
-    usuario_id_resuelto: int = Depends(get_current_user_id),
-):
-    """Tile vectorial MVT con densidad como superficie continua.
 
-    Los puntos de `mapa_color` forman una grilla regular de ~10.4x10.4m. Cada
-    punto se expande a su celda cuadrada (ST_Expand 8m, ~16x16m), recortada
-    por el potrero (`potreros_base`) y por el tile. La celda supera el paso
-    de grilla a propósito: la medición no siempre llega hasta el borde del
-    lote y con celdas justas quedaban franjas sin rellenar. Como el relleno
-    es sólido, el solape entre vecinas no se nota. Props: {id, valor}.
-    Duplicados en la misma coordenada se resuelven con DISTINCT ON.
-    Las `zonas_exclusion` se recortan: ni puntos con centro dentro ni
-    geometría superpuesta generan relleno (hueco = satélite a la vista).
+# ---------------------------------------------------------------------------
+# Caché de tiles: LRU en proceso (por worker) + tabla compartida en la BD.
+# Los tiles son inmutables por (finca, fecha, tipo): recalcularlos costaba
+# 2-7s cada vez; ahora el segundo pedido es un lookup.
+# ---------------------------------------------------------------------------
+
+# Caché en proceso (por worker): LRU con TTL. El TTL importa: al re-ingerir
+# datos se invalida `mapa_tiles_cache` (BD compartida), pero este mapa vivo
+# no se entera, y sin vencimiento serviría el MVT viejo hasta la eviction.
+_LRU_MAX = 128
+_LRU_TTL_S = 300.0
+_lru: "OrderedDict[tuple, tuple]" = OrderedDict()  # clave -> (creado_en, mvt)
+_lru_lock = threading.Lock()
+
+
+def _lru_get(clave: tuple) -> Optional[bytes]:
+    with _lru_lock:
+        entrada = _lru.get(clave)
+        if entrada is None:
+            return None
+        creado, mvt = entrada
+        if time.time() - creado > _LRU_TTL_S:
+            _lru.pop(clave, None)
+            return None
+        _lru.move_to_end(clave)
+        return mvt
+
+
+def _lru_put(clave: tuple, valor: bytes) -> None:
+    with _lru_lock:
+        _lru[clave] = (time.time(), valor)
+        _lru.move_to_end(clave)
+        while len(_lru) > _LRU_MAX:
+            _lru.popitem(last=False)
+
+
+# ¿El grupo (uid, finca, fecha) ya tiene celdas precalculadas? Se cachea un
+# rato para no hacer un SELECT por cada tile del viewport.
+_disp: dict[tuple, tuple] = {}
+_disp_lock = threading.Lock()
+_DISP_TTL_S = 60.0
+
+
+def _celdas_listas(uid: int, finca: str, fecha: date) -> bool:
+    clave = (uid, finca, fecha)
+    ahora = time.time()
+    with _disp_lock:
+        hit = _disp.get(clave)
+        if hit and hit[1] > ahora:
+            return bool(hit[0])
+    try:
+        with engine.connect() as conn:
+            ok = repo_celdas.celdas_disponibles(conn, uid, finca, fecha)
+    except Exception:
+        # Sin tabla de celdas (migración aún no aplicada): query viejo.
+        ok = False
+    with _disp_lock:
+        _disp[clave] = (ok, ahora + _DISP_TTL_S)
+    return ok
+
+
+def _bordes_mvt(row) -> Optional[bytes]:
+    if row is None or row[0] is None:
+        return b""
+    mvt = row[0]
+    if isinstance(mvt, memoryview):
+        return mvt.tobytes()
+    if isinstance(mvt, str):
+        return mvt.encode()
+    return bytes(mvt)
+
+
+def _tile_celdas(conn, uid: int, finca: str, fecha: date, z: int, x: int, y: int, columna: str) -> bytes:
+    """Ruta rápida: celdas ya recortadas, solo escaneo GIST/btree + ST_AsMVT.
+
+    `rec` MATERIALIZED: sin eso PG reevaluaría ST_AsMVTGeom en cada predicado
+    del filtro de afuera (2-3 veces por celda). `env` NO va materializado a
+    propósito: inlineado, el planner ve el envelope como constante y usa el
+    índice (usuario, finca, fecha): 348ms -> 112ms en el tile z13 más grande.
     """
-    tipo = tipo_densidad.strip().lower()
-    if tipo not in TIPOS_VALIDOS:
-        raise HTTPException(status_code=400, detail=f"tipo_densidad inválido. Use: {list(TIPOS_VALIDOS)}")
-    columna = COL_DENSIDAD[tipo]
+    row = conn.execute(
+        text(f"""
+            WITH env AS (
+                SELECT ST_TileEnvelope(:z, :x, :y) AS tile
+            ),
+            rec AS MATERIALIZED (
+                SELECT ST_AsMVTGeom(c.geom, e.tile, 4096, 0, true) AS geom,
+                       c.{columna} AS valor
+                FROM mapa_celdas c, env e
+                WHERE c.usuario_id = :uid
+                  AND c.finca = :finca
+                  AND c.fecha = :fecha
+                  AND c.{columna} IS NOT NULL
+                  AND c.geom && e.tile
+            )
+            SELECT ST_AsMVT(m, 'densidad', 4096, 'geom')
+            FROM (SELECT geom, valor FROM rec WHERE geom IS NOT NULL AND NOT ST_IsEmpty(geom)) m
+        """),
+        {"z": z, "x": x, "y": y, "uid": uid, "finca": finca, "fecha": fecha},
+    ).fetchone()
+    return _bordes_mvt(row)
 
-    # ST_TileEnvelope falla con 500 si x/y están fuera del rango del zoom.
-    if x >= (1 << z) or y >= (1 << z):
-        raise HTTPException(status_code=404, detail=f"Tile z={z} x={x} y={y} fuera de rango")
 
-    finca_norm = finca.strip()
-    if not finca_norm:
-        raise HTTPException(status_code=400, detail="estancia requerida")
-
-    # Buffer en metros (SRID 3857) alrededor del tile: las celdas del borde
-    # necesitan cubrir hasta el borde exacto del tile; el recorte final
-    # se hace contra el tile exacto + el polígono del potrero.
-    buf_m = 20
-    # Media celda de 8m (~16x16m sobre grilla de ~10.4m): cubre las franjas
-    # de borde donde la medición no llega hasta el límite del lote. El
-    # solape entre vecinas no se nota con relleno sólido. Se probó Voronoi
-    # (cobertura exacta) pero era demasiado lento por tile y GEOS fallaba
-    # con tolerance > 0 en esta grilla.
-    medio_lado_m = 8
-
+def _tile_legacy(conn, uid: int, finca: str, fecha: date, z: int, x: int, y: int, columna: str) -> bytes:
+    """Fallback on-the-fly (celdas construidas por tile). Para grupos sin
+    precalcular, p. ej. tras una ingesta con el hook desactivado."""
     sql = text(f"""
         WITH env AS (
             SELECT ST_TileEnvelope(:z, :x, :y) AS tile,
@@ -89,7 +162,7 @@ def get_mapa_tile(
               AND mc.finca = :finca
               AND mc.fecha = :fecha
               AND {columna} IS NOT NULL
-              -- Prefiltro barato con índice GIST (idx_color_geom); el chequeo
+              -- Prefiltro barato con índice GIST (idx_mapa_geom); el chequeo
               -- exacto con ST_Transform va después.
               AND mc.geom && ST_Transform(env.tile_buf, 4326)
               AND ST_Intersects(
@@ -138,38 +211,241 @@ def get_mapa_tile(
             WHERE c.inter IS NOT NULL AND NOT ST_IsEmpty(c.inter)
         ) AS mvt_q
     """)
+    row = conn.execute(sql, {
+        "z": z, "x": x, "y": y,
+        "buf": BUF_M,
+        "medio_lado": MEDIO_LADO_M,
+        "uid": uid,
+        "finca": finca,
+        "fecha": fecha,
+    }).fetchone()
+    return _bordes_mvt(row)
 
-    with engine.connect() as conn:
-        row = conn.execute(sql, {
-            "z": z, "x": x, "y": y,
-            "buf": buf_m,
-            "medio_lado": medio_lado_m,
-            "uid": usuario_id_resuelto,
-            "finca": finca_norm,
-            "fecha": fecha,
-        }).fetchone()
-        mvt = row[0] if row and row[0] is not None else None
 
-    if mvt is None:
-        return Response(content=b"", media_type="application/x-protobuf")
+def _renderizar_tile(uid: int, finca: str, fecha: date, tipo: str,
+                     z: int, x: int, y: int, columna: str) -> bytes:
+    """Cachea (LRU + BD) y devuelve el tile. Si el grupo no tiene celdas
+    precalculadas, cae al query viejo."""
+    clave = (uid, finca, fecha, tipo, z, x, y)
+    mvt = _lru_get(clave)
+    if mvt is not None:
+        return mvt
+    try:
+        with engine.connect() as conn:
+            mvt = repo_celdas.leer_tile_cache(conn, uid, finca, fecha, tipo, z, x, y)
+    except Exception:
+        mvt = None
+    if mvt is not None:
+        _lru_put(clave, mvt)
+        return mvt
 
-    if isinstance(mvt, memoryview):
-        mvt = mvt.tobytes()
-    elif isinstance(mvt, str):
-        mvt = mvt.encode()
+    # Antiduplicado entre workers: si otro proceso está calculando este mismo
+    # tile, esperamos a que termine y lo leemos de la caché compartida en vez
+    # de hacer el trabajo dos veces (era el pico de ~1.4s del z13 grande).
+    with engine.begin() as conn:
+        repo_celdas.tomar_lock_tile(conn, uid, finca, fecha, tipo, z, x, y)
+        try:
+            mvt = repo_celdas.leer_tile_cache(conn, uid, finca, fecha, tipo, z, x, y)
+            if mvt is None:
+                con_celdas = _celdas_listas(uid, finca, fecha)
+                mvt = (_tile_celdas if con_celdas else _tile_legacy)(
+                    conn, uid, finca, fecha, z, x, y, columna)
+                repo_celdas.guardar_tile_cache(conn, uid, finca, fecha, tipo, z, x, y, mvt)
+                if random.random() < 0.02:
+                    repo_celdas.podar_cache_tiles(conn)
+        finally:
+            repo_celdas.soltar_lock_tile(conn, uid, finca, fecha, tipo, z, x, y)
 
+    _lru_put(clave, mvt)
+    return mvt
+
+
+# --- Precalentado bajo demanda ---------------------------------------------
+# El navegador pide ~24 tiles por viewport de a 6 (HTTP/1.1). Con el primer
+# tile se dispara en segundo plano el render del resto de la grilla de la
+# finca para ese mismo zoom, así panear/cambiar de fecha cae casi todo en caché.
+
+_calentando: set = set()
+_calentando_lock = threading.Lock()
+_CALIENTE_MAX_TILES = 80
+_CALIENTE_PAUSA_S = 0.02
+# No repetir el pase de precalentado del mismo grupo tan seguido: el
+# viewport dispara ~24 requests y cada uno llamaría a esta función.
+_CALIENTE_TTL_S = 300.0
+_calentado_hasta: dict = {}
+_calentado_lock = threading.Lock()
+
+
+def _rango_tiles(min_lon: float, min_lat: float, max_lon: float, max_lat: float, z: int):
+    """Rango de tiles (x, y) que cubren un bbox lon/lat en el zoom dado."""
+    n = 1 << z
+
+    def tx(lon: float) -> int:
+        return int((lon + 180.0) / 360.0 * n)
+
+    def ty(lat: float) -> int:
+        lat = max(min(lat, 85.05112878), -85.05112878)
+        r = math.radians(lat)
+        return int((1.0 - math.asinh(math.tan(r)) / math.pi) / 2.0 * n)
+
+    x0, x1 = max(0, tx(min_lon)), min(n - 1, tx(max_lon))
+    y0, y1 = max(0, ty(max_lat)), min(n - 1, ty(min_lat))
+    if x1 < x0 or y1 < y0:
+        return [], []
+    return list(range(x0, x1 + 1)), list(range(y0, y1 + 1))
+
+
+def _precalentar_async(uid: int, finca: str, fecha: date, tipo: str, z: int,
+                       skip_xy: tuple, columna: str,
+                       bbox: Optional[tuple] = None) -> None:
+    """Renderiza en segundo plano la grilla de tiles que cubre la finca.
+
+    `bbox` (min_lon, min_lat, max_lon, max_lat) permite acotar a la zona
+    visible; sin él se usa el bbox de los potreros. Best-effort: nunca
+    propaga errores (corre en un thread).
+    """
+    if z < 0 or z > 17:
+        return
+    clave = (uid, finca, fecha, tipo, z, None if bbox is None else tuple(round(v, 4) for v in bbox))
+    ahora = time.time()
+    with _calentando_lock:
+        if clave in _calentando or _calentado_hasta.get(clave, 0) > ahora:
+            return
+        _calentando.add(clave)
+
+    def tarea() -> None:
+        try:
+            if bbox is not None:
+                xs, ys = _rango_tiles(bbox[0], bbox[1], bbox[2], bbox[3], z)
+            else:
+                with engine.connect() as conn:
+                    ext = conn.execute(
+                        text("""
+                            SELECT ST_XMin(e), ST_YMin(e), ST_XMax(e), ST_YMax(e)
+                            FROM (SELECT ST_Extent(geom) AS e FROM potreros_base
+                                  WHERE usuario_id = :uid AND finca = :finca) s
+                        """),
+                        {"uid": uid, "finca": finca},
+                    ).fetchone()
+                # len(ext) != 4: engine mockeado/consulta rara. El precalentado es
+                # best-effort, no puede tumbar un hilo ni ensuciar los tests.
+                if not ext or len(ext) < 4 or ext[0] is None:
+                    return
+                xs, ys = _rango_tiles(ext[0], ext[1], ext[2], ext[3], z)
+            if not xs or not ys or len(xs) * len(ys) > _CALIENTE_MAX_TILES:
+                return
+            for tx_ in xs:
+                for ty_ in ys:
+                    if (tx_, ty_) == skip_xy:
+                        continue
+                    try:
+                        _renderizar_tile(uid, finca, fecha, tipo, z, tx_, ty_, columna)
+                    except Exception:
+                        pass  # best-effort: lo pedirá el navegador si hace falta
+                    time.sleep(_CALIENTE_PAUSA_S)
+        finally:
+            with _calentando_lock:
+                _calentando.discard(clave)
+                _calentado_hasta[clave] = time.time() + _CALIENTE_TTL_S
+
+    threading.Thread(target=tarea, daemon=True, name=f"warmup-tiles-{finca}").start()
+
+
+def _respuesta_mvt(mvt: bytes) -> Response:
     return Response(
-        content=bytes(mvt),
+        content=mvt,
         media_type="application/x-protobuf",
         headers={
             "Content-Disposition": "inline",
             # El contenido va direccionado por (finca, fecha, tipo): si esos
-            # no cambian, el tile es inmutable. 1h de caché evita recalcular
-            # y retransferir al revisitar fechas (gran parte de los ~25s).
-            # Tras re-ingestar datos, forzar recarga (Ctrl+Shift+R).
+            # no cambian, el tile es inmutable. Además hay caché server-side
+            # (mapa_tiles_cache), así que el 1h del navegador solo evita
+            # re-transferir. Tras re-ingestar datos se invalida server-side;
+            # para forzar en el cliente: Ctrl+Shift+R.
             "Cache-Control": "public, max-age=3600",
         },
     )
+
+
+@router.get("/tiles/{z}/{x}/{y}.pbf")
+def get_mapa_tile(
+    z: int = Path(..., ge=0, le=22, description="Zoom"),
+    x: int = Path(..., ge=0),
+    y: int = Path(..., ge=0),
+    finca: str = Query(..., description="Estancia exacta, ej: La Esperanza"),
+    fecha: date = Query(..., description="Fecha YYYY-MM-DD, ej: 2024-04-01"),
+    tipo_densidad: str = Query(..., description="verde | muerta | total"),
+    usuario_id_resuelto: int = Depends(get_current_user_id),
+):
+    """Tile vectorial MVT con densidad como superficie continua.
+
+    Los puntos de `mapa_color` forman una grilla regular de ~10.4x10.4m y
+    cada punto se expande a su celda cuadrada (~16x16m) recortada por el
+    potrero y menos las zonas de exclusion. Esas celdas se precalculan al
+    ingerir (`mapa_celdas`, ver repositorios/celdas.py) y el tile solo las
+    escanea por indice GIST: ~50-150ms en vez de ~2-7s construyendolas por
+    tile. Los bytes MVT quedan cacheados en `mapa_tiles_cache` (+ LRU por
+    worker) y la primera vista dispara el precalentado del resto de la grilla.
+
+    Si un (finca, fecha) todavia no tiene celdas (ingesta vieja sin backfill),
+    cae al query legacy que las construye on-the-fly.
+    """
+    tipo = tipo_densidad.strip().lower()
+    if tipo not in TIPOS_VALIDOS:
+        raise HTTPException(status_code=400, detail=f"tipo_densidad inválido. Use: {list(TIPOS_VALIDOS)}")
+    columna = COL_DENSIDAD[tipo]
+
+    # ST_TileEnvelope falla con 500 si x/y están fuera del rango del zoom.
+    if x >= (1 << z) or y >= (1 << z):
+        raise HTTPException(status_code=404, detail=f"Tile z={z} x={x} y={y} fuera de rango")
+
+    finca_norm = finca.strip()
+    if not finca_norm:
+        raise HTTPException(status_code=400, detail="estancia requerida")
+
+    mvt = _renderizar_tile(usuario_id_resuelto, finca_norm, fecha, tipo, z, x, y, columna)
+    # Precalentar el resto de la grilla de la finca en este zoom (thread
+    # aparte, best-effort): hace que panear y volver sea casi instantáneo.
+    _precalentar_async(usuario_id_resuelto, finca_norm, fecha, tipo, z, (x, y), columna)
+    return _respuesta_mvt(mvt)
+
+
+@router.post("/precalentar")
+def post_mapa_precalentar(
+    finca: str = Query(..., description="Estancia exacta, ej: La Esperanza"),
+    fecha: date = Query(..., description="Fecha YYYY-MM-DD, ej: 2024-04-01"),
+    tipo_densidad: str = Query("total", description="verde | muerta | total"),
+    z: int = Query(..., ge=0, le=17, description="Zoom del viewport"),
+    min_lon: Optional[float] = Query(None, description="Oeste del viewport"),
+    min_lat: Optional[float] = Query(None, description="Sur del viewport"),
+    max_lon: Optional[float] = Query(None, description="Este del viewport"),
+    max_lat: Optional[float] = Query(None, description="Norte del viewport"),
+    usuario_id_resuelto: int = Depends(get_current_user_id),
+):
+    """Dispara el render de la grilla de tiles en segundo plano (no bloquea).
+
+    Pensado para que el frontend lo llame al abrir el mapa o al cambiar
+    fecha/zoom: cuando el navegador pide los ~24 tiles del viewport ya están
+    (o están siendo) cacheados, y la primera pintada deja de pagar el arranque
+    en frío. Idempotente y con TTL: pedirlo muchas veces no repite trabajo.
+    """
+    tipo = tipo_densidad.strip().lower()
+    if tipo not in TIPOS_VALIDOS:
+        raise HTTPException(status_code=400, detail=f"tipo_densidad inválido. Use: {list(TIPOS_VALIDOS)}")
+    finca_norm = finca.strip()
+    if not finca_norm:
+        raise HTTPException(status_code=400, detail="estancia requerida")
+
+    bbox = None
+    if None not in (min_lon, min_lat, max_lon, max_lat):
+        if min_lon >= max_lon or min_lat >= max_lat:
+            raise HTTPException(status_code=400, detail="bbox inválido (min debe ser menor que max)")
+        bbox = (min_lon, min_lat, max_lon, max_lat)
+
+    _precalentar_async(usuario_id_resuelto, finca_norm, fecha, tipo, z, None,
+                       COL_DENSIDAD[tipo], bbox=bbox)
+    return {"estado": "programado", "finca": finca_norm, "fecha": fecha,
+            "tipo_densidad": tipo, "z": z}
 
 
 @router.get("/histograma")

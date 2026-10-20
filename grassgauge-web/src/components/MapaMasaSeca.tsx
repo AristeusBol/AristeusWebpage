@@ -10,7 +10,7 @@ import { degradadoMapLibre } from '../lib/masaSeca';
 import { anillosDe, snapClic } from '../lib/snap';
 import {
   INITIAL_CENTER, INITIAL_ZOOM, bboxCombinado, buildStyleEsri, encuadrar,
-  tilesUrl, transformRequestTiles,
+  precalentarMasaSeca, tilesUrl, transformRequestTiles,
 } from '../lib/mapCommon';
 import { MAP_CHROME } from '../lib/mapPalette';
 
@@ -352,7 +352,25 @@ export default function MapaMasaSeca({ features, selectedId, onSelect, finca, fe
       syncCapas(map as Map);
       fitKey.current = `${filtroRef.current.finca}|${filtroRef.current.fecha}|${dataRef.current.length}`;
       fitAll(map as Map);
+      programarPrecalentado();
     });
+    // Al dejar de mover el mapa se precalienta el viewport: cuando el navegador
+    // pide los tiles ya están (o están siendo) renderizados en el backend.
+    let tPrec: ReturnType<typeof setTimeout> | null = null;
+    const programarPrecalentado = (): void => {
+      if (tPrec) clearTimeout(tPrec);
+      tPrec = setTimeout(() => {
+        const { finca: f, fecha: fe, tipo: t } = filtroRef.current;
+        if (!f || !fe) return;
+        const m = map as Map;
+        const b = m.getBounds();
+        precalentarMasaSeca(f, fe, t, Math.round(m.getZoom()), [
+          [b.getWest(), b.getSouth()],
+          [b.getEast(), b.getNorth()],
+        ]);
+      }, 400);
+    };
+    map.on('moveend', programarPrecalentado);
     const aplicarIman = (lng: number, lat: number, point: { x: number; y: number }): { ll: [number, number]; tipo: 'nada' | 'vertice' | 'borde'; seg: [[number, number], [number, number]] | null } => {
       try {
         const m = map as Map;
