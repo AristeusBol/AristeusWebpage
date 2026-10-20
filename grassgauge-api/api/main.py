@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -8,10 +10,29 @@ from core.config import CORS_ORIGINS
 from api.routers import auth, balance, calibracion, dashboard, filtros, mapa, parcelas, potreros, rodeos, rotacion
 from api.routers.calibracion import UPLOAD_DIR
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Esquema idempotente de celdas precalculadas + caché de tiles.
+
+    Corre por worker (4 con uvicorn --workers 4); los duplicados se ignoran
+    dentro de asegurar_esquema. Si la BD no está disponible al arrancar se
+    avisa y la API sigue: los endpoints que la necesitan fallarán solos.
+    """
+    try:
+        from core.db import engine
+        from repositorios import celdas
+        celdas.asegurar_esquema(engine)
+    except Exception as e:  # noqa: BLE001
+        print(f"[!] No se pudo asegurar el esquema mapa_celdas/mapa_tiles_cache: {e}")
+    yield
+
+
 app = FastAPI(
     title="GrassGauge API",
     description="Motor analítico espacial y forrajero: auth, filtros, mapa vectorial, dashboard y calibración",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 _WILDCARD_CORS = len(CORS_ORIGINS) == 1 and CORS_ORIGINS[0] == "*"

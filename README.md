@@ -75,3 +75,49 @@ python motor_analitico/ingestar_csv.py --tabla zonas_exclusion --archivo datos/z
 python motor_analitico/ingestar_csv.py --tabla mapa_color     --archivo datos/mapa_color.csv
 python motor_analitico/calcular_kilos_reales.py --potrero 1 --guardar   # repetir por potrero
 ```
+
+## Rendimiento del mapa de masa seca (celdas precalculadas)
+
+El mapa de densidad sirve tiles MVT desde `mapa_celdas`: celdas de ~16x16m
+ya recortadas por potrero y menos zonas de exclusión, generadas **una vez
+por ingesta** (el hook de `ingestar_csv.py` lo hace solo; ~50-150ms por tile
+en vez de ~2-7s construyéndolas por tile). Los MVT renderizados se cachean
+en `mapa_tiles_cache` (compartida entre workers) + un LRU por worker.
+
+El frontend llama **`POST /api/mapa/precalentar`** al abrir el mapa y al
+dejar de moverlo (`moveend`, con debounce), pasando el bbox y zoom visibles:
+el backend renderiza esa grilla en segundo plano, así cuando el navegador
+pide los tiles ya están (o están siendo) cacheados. Es best-effort e
+idempotente (TTL + dedupe), y el endpoint responde sin bloquear (~20ms).
+
+- La API crea esas dos tablas y sus índices sola al arrancar (idempotente);
+  en installs nuevos también están en `infra/init_db/003_mapa_celdas.sql`.
+  El índice `idx_celdas_grupo_geom` es un GIST compuesto sobre
+  `(usuario_id, finca, fecha, geom)` (requiere `btree_gist`): resuelve grupo
+  + filtro espacial en un solo Index Cond.
+- Backfill manual / regenerar tras tocar la BD:
+
+```bash
+cd grassgauge-api
+python motor_analitico/precalcular_celdas.py                    # todos los grupos
+python motor_analitico/precalcular_celdas.py --fecha 2026-09-14 # una fecha
+```
+
+- Si un (finca, fecha) queda sin celdas (p. ej. fallo al regenerar), el
+  endpoint cae solo al cálculo on-the-fly: más lento pero correcto.
+- Tras re-ingerir datos la caché de tiles se invalida sola para los grupos
+  tocados; en el navegador, Ctrl+Shift+R si querés ignorar la del cliente.
+- Si dos workers piden el mismo tile frío a la vez, un advisory lock de PG
+  hace que uno calcule y el otro espere y lea el resultado (antes lo hacían
+  los dos: era el pico de ~1.4s del z13 grande).
+
+Medido sobre Aristeus (12 fechas x ~209k puntos, 65 potreros), pidiendo los
+tiles de a 6 como el navegador:
+
+| Viewport | Antes | Primera vista | Repetida |
+| --- | --- | --- | --- |
+| z13, 12 tiles | 9.1s | ~1.1s | ~0.04s |
+| z14, 24 tiles | 5.7s | ~1.0s | ~0.07s |
+
+Con el precalentado proactivo la primera vista del z14 baja a **~0.17s**
+(desde ~0.64s sin avisar el viewport) y el pico por tile de ~0.5s a ~0.13s.
