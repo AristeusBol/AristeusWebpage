@@ -130,6 +130,40 @@ def test_histograma_sin_datos():
     assert data["stats"]["count"] == 0
 
 
+def test_histograma_sin_potrero_no_envia_pid_nulo():
+    """Regresión: sin potrero_id, el SQL NO debe referenciar :pid.
+
+    Antes se usaba `(:pid IS NULL OR potrero_id = :pid)`: con psycopg3 un
+    parámetro None no tiene tipo inferible y Postgres rechaza la consulta
+    con AmbiguousParameter ("could not determine data type of parameter"),
+    devolviendo un 500 al pedir "Toda la estancia". El filtro por potrero
+    ahora es un fragmento condicional que se omite cuando no aplica.
+    """
+    eng, conn = _mock_hist_engine([10.0, 20.0], dueno=None)
+    with patch("api.routers.mapa.engine", eng):
+        resp = client.get("/api/mapa/histograma?finca=F&fecha=2024-04-01&bins=5", headers=auth_headers(1))
+    assert resp.status_code == 200
+    for call in conn.execute.call_args_list:
+        sql = str(call[0][0])
+        params = call[0][1] if len(call[0]) > 1 else {}
+        assert ":pid" not in sql, "SQL referenció :pid sin potrero_id (AmbiguousParameter en psycopg3)"
+        assert "pid" not in params, "Se envió pid=None como parámetro sin tipo"
+
+
+def test_histograma_con_potrero_si_filtra_por_pid():
+    """Con potrero_id, las queries de área/stats/buckets sí filtran por :pid."""
+    eng, conn = _mock_hist_engine([10.0, 20.0], dueno=True)
+    with patch("api.routers.mapa.engine", eng):
+        resp = client.get("/api/mapa/histograma?finca=F&fecha=2024-04-01&bins=5&potrero_id=3", headers=auth_headers(1))
+    assert resp.status_code == 200
+    con_pid = [str(call[0][0]) for call in conn.execute.call_args_list if ":pid" in str(call[0][0])]
+    # ownership + área filtran por p.id = :pid; stats + buckets x3 por
+    # potrero_id = :pid (la query global no filtra por potrero).
+    assert len(con_pid) >= 5
+    por_columna = [sql for sql in con_pid if "potrero_id = :pid" in sql]
+    assert len(por_columna) >= 4  # stats + buckets de las 3 densidades
+
+
 def test_histograma_parcela_ok_y_404():
     parc = MagicMock(potrero_id=7, geom_json={"type": "Polygon", "coordinates": []})
     eng, conn = _mock_hist_engine([10.0, 20.0], dueno=parc)

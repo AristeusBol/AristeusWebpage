@@ -501,6 +501,13 @@ def get_mapa_histograma(
         if not dueno:
             raise HTTPException(status_code=404, detail=f"Potrero {potrero_id} no existe o no es tuyo")
 
+    # Filtro por potrero como fragmento condicional (mismo estilo que
+    # recorte_parcela). Evita `(:pid IS NULL OR ... = :pid)`: con psycopg3 un
+    # parámetro None no tiene tipo inferible y Postgres rechaza la consulta
+    # con AmbiguousParameter ("could not determine data type of parameter").
+    filtro_potrero_base = " AND p.id = :pid" if potrero_id is not None else ""
+    filtro_potrero_mapa = " AND potrero_id = :pid" if potrero_id is not None else ""
+
     # Área neta (bruta menos exclusiones) de la estancia, del potrero o de
     # la parcela: el factor kg/punto debe repartir el área productiva, no la
     # bruta. Antes se usaba el área bruta, sobreestimando los kg cuando hay
@@ -519,7 +526,7 @@ def get_mapa_histograma(
         """)
         area_params = {"uid": usuario_id_resuelto, "pid": potrero_id, "gj": gj_text}
     else:
-        area_sql = text("""
+        area_sql = text(f"""
         SELECT COALESCE(SUM(ST_Area(p.geom::geography)), 0)
               - COALESCE(SUM(ST_Area(ST_Intersection(
                      p.geom,
@@ -532,10 +539,11 @@ def get_mapa_histograma(
             WHERE usuario_id = :uid
             GROUP BY potrero_id
         ) u ON u.potrero_id = p.id
-        WHERE p.usuario_id = :uid AND p.finca = :finca
-          AND (:pid IS NULL OR p.id = :pid)
+        WHERE p.usuario_id = :uid AND p.finca = :finca{filtro_potrero_base}
     """)
-        area_params = {"uid": usuario_id_resuelto, "finca": finca_norm, "pid": potrero_id}
+        area_params = {"uid": usuario_id_resuelto, "finca": finca_norm}
+        if potrero_id is not None:
+            area_params["pid"] = potrero_id
     with engine.connect() as conn:
         area_row = conn.execute(area_sql, area_params).fetchone()
     area_m2 = float(area_row[0]) if area_row and area_row[0] else 0.0
@@ -558,19 +566,21 @@ def get_mapa_histograma(
         WHERE usuario_id = :uid
           AND finca = :finca
           AND fecha = :fecha
-          AND (:pid IS NULL OR potrero_id = :pid){recorte_parcela}
+          AND fecha = :fecha{filtro_potrero_mapa}{recorte_parcela}
           AND NOT EXISTS (SELECT 1 FROM zonas_exclusion z
             WHERE z.usuario_id = m.usuario_id AND z.potrero_id = m.potrero_id
               AND ST_Covers(z.geom, m.geom))
     """)
+    stats_params: dict = {
+        "uid": usuario_id_resuelto,
+        "finca": finca_norm,
+        "fecha": fecha,
+        "gj": gj_text or "",
+    }
+    if potrero_id is not None:
+        stats_params["pid"] = potrero_id
     with engine.connect() as conn:
-        stats = conn.execute(stats_sql, {
-            "uid": usuario_id_resuelto,
-            "finca": finca_norm,
-            "fecha": fecha,
-            "pid": potrero_id,
-            "gj": gj_text or "",
-        }).fetchone()
+        stats = conn.execute(stats_sql, stats_params).fetchone()
 
     filtros = {
         "finca": finca_norm,
@@ -632,22 +642,24 @@ def get_mapa_histograma(
             WHERE usuario_id = :uid
               AND finca = :finca
               AND fecha = :fecha
-              AND (:pid IS NULL OR potrero_id = :pid){recorte_parcela}
+              AND fecha = :fecha{filtro_potrero_mapa}{recorte_parcela}
               AND {columna} IS NOT NULL
               AND NOT EXISTS (SELECT 1 FROM zonas_exclusion z
                 WHERE z.usuario_id = m.usuario_id AND z.potrero_id = m.potrero_id
                   AND ST_Covers(z.geom, m.geom))
             GROUP BY bucket
         """)
+        params: dict = {
+            "vmin": gmin, "vmax": gmax, "bins": bins,
+            "uid": usuario_id_resuelto,
+            "finca": finca_norm,
+            "fecha": fecha,
+            "gj": gj_text or "",
+        }
+        if potrero_id is not None:
+            params["pid"] = potrero_id
         with engine.connect() as conn:
-            return conn.execute(q, {
-                "vmin": gmin, "vmax": gmax, "bins": bins,
-                "uid": usuario_id_resuelto,
-                "finca": finca_norm,
-                "fecha": fecha,
-                "pid": potrero_id,
-                "gj": gj_text or "",
-            }).fetchall()
+            return conn.execute(q, params).fetchall()
 
     def plegar(filas):
         conteos = [0] * bins

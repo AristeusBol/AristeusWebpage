@@ -64,6 +64,9 @@ export default function MapaMasaSeca({ features, selectedId, onSelect, finca, fe
   const dataRef = useRef<PotreroFeature[]>(features);
   const excRef = useRef<ExclusionOverlayFeature[]>(exclusiones);
   const selRef = useRef<number | null>(selectedId);
+  // Id del potrero bajo el cursor (hover). Se usa para no pintar el hover
+  // sobre el potrero ya seleccionado: su línea blanca taparía el amarillo.
+  const hoverRef = useRef<number | null>(null);
   const filtroRef = useRef({ finca, fecha, tipo, uid });
   const onSelectRef = useRef(onSelect);
   const parcRef = useRef<ParcelaMapFeature[]>(parcelas);
@@ -134,7 +137,7 @@ export default function MapaMasaSeca({ features, selectedId, onSelect, finca, fe
           type: 'line',
           source: 'potreros',
           filter: sel,
-          paint: { 'line-color': MAP_CHROME.seleccionAmarilloLuz, 'line-width': 4, 'line-opacity': 1 },
+          paint: { 'line-color': MAP_CHROME.seleccionAmarillo, 'line-width': 4, 'line-opacity': 1 },
         });
         map.addLayer({
           id: 'potreros-hover',
@@ -162,6 +165,14 @@ export default function MapaMasaSeca({ features, selectedId, onSelect, finca, fe
         pot?.setData(fc);
         if (map.getLayer('potreros-sel')) map.setFilter('potreros-sel', sel);
         if (map.getLayer('potreros-sel-halo')) map.setFilter('potreros-sel-halo', sel);
+      }
+      // La selección pudo cambiar con el cursor ya dentro del potrero (clic,
+      // selección desde la lista lateral o auto-selección al cargar). Se
+      // re-afirma el hover para que no tape el amarillo del recién elegido.
+      if (map.getLayer('potreros-hover')) {
+        const h = hoverRef.current;
+        const aplica = h !== null && h !== selRef.current ? h : -1;
+        map.setFilter('potreros-hover', ['==', ['get', 'id'], aplica] as FilterSpecification);
       }
 
       // Densidad como superficie continua (celdas Voronoi del backend):
@@ -466,12 +477,19 @@ export default function MapaMasaSeca({ features, selectedId, onSelect, finca, fe
     map.on('mouseenter', 'potreros-fill', () => { map!.getCanvas().style.cursor = dibRef.current.dibujando ? 'none' : 'pointer'; });
     map.on('mousemove', 'potreros-fill', (e) => {
       const id = e.features?.[0]?.properties?.id;
+      const nid = typeof id === 'number' ? id : null;
+      hoverRef.current = nid;
       if (map!.getLayer('potreros-hover')) {
-        map!.setFilter('potreros-hover', ['==', ['get', 'id'], typeof id === 'number' ? id : -1] as FilterSpecification);
+        // No se resalta con hover el potrero ya seleccionado: la línea blanca
+        // de hover se dibuja ENCIMA del amarillo de selección y lo taparía
+        // hasta que el cursor salga del potrero.
+        const aplica = nid !== null && nid !== selRef.current ? nid : -1;
+        map!.setFilter('potreros-hover', ['==', ['get', 'id'], aplica] as FilterSpecification);
       }
     });
     map.on('mouseleave', 'potreros-fill', () => {
       map!.getCanvas().style.cursor = dibRef.current.dibujando ? 'none' : '';
+      hoverRef.current = null;
       if (map!.getLayer('potreros-hover')) {
         map!.setFilter('potreros-hover', ['==', ['get', 'id'], -1] as FilterSpecification);
       }

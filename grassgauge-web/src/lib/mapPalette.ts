@@ -14,10 +14,10 @@ export const MAP_CHROME = {
   potreroCasing: '#052e16',
   // Fondo oscuro del potrero (rotación muestra potrero lleno)
   potreroFillOscuro: '#233D39',
-  // Selección: amarillo / cian según contexto (contraste alto)
+  // Selección: amarillo saturado de alto contraste sobre satélite.
+  // (Antes #fde047, demasiado pálido: se perdía sobre pasto seco y tierra.)
   seleccionAmarillo: '#facc15',
   seleccionCyan: '#22d3ee',
-  seleccionAmarilloLuz: '#fde047',
   // Destructivo / dibujo
   exclusionesRelleno: '#dc2626',
   exclusionesTexto: '#fecaca',
