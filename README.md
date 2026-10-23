@@ -20,6 +20,8 @@ cd grassgauge-web  && cp .env.example .env && cd ..
 
 # 2. Base de datos + API (Docker)
 docker compose -f infra/docker-compose.yml up -d db api
+- bajar la base:
+docker compose -f infra/docker-compose.yml down
 
 # 3. Frontend (la primera vez, instalar dependencias)
 cd grassgauge-web
