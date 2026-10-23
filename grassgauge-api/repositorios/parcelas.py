@@ -9,6 +9,11 @@ ESTADOS_VALIDOS = {"critico", "desarrollo", "optimo", "maduro", "pasado"}
 # (compartir borde exacto SÍ está permitido).
 SOLAPE_TOL_M2 = 1.0
 
+# Tolerancia de área fuera del potrero: el snap al borde puede dejar el
+# polígono unas fracciones de mm afuera por redondeo de coordenadas. Hasta
+# 1 m² se considera un borde compartido y se recorta; más, se rechaza.
+FUERA_TOL_M2 = 1.0
+
 
 def geom_geojson_text(geom: dict) -> str:
     return json.dumps(geom)
@@ -43,19 +48,21 @@ def calculo_potrero(conn, potrero_id, usuario_id, fecha_iso):
 
 
 def validar_contenida(conn, gj_text, potrero_id, usuario_id):
-    """True si la geometría candidata está cubierta por el potrero.
+    """Valida la geometría candidata contra el potrero.
 
-    Se usa ST_Covers (no ST_Within) para permitir compartir borde exacto
-    con el potrero (imán al perímetro en el mapa de masa seca).
+    Se usa ST_Covers (no ST_Within) para permitir compartir borde exacto con el
+    potrero. Además se calcula el área que queda fuera: el snap al borde del
+    mapa interpola coordenadas y puede dejar el punto a una fracción de
+    milímetro fuera por error de coma flotante, que ST_Covers exacto rechaza.
     """
     row = conn.execute(
         text("""
-            SELECT ST_Covers(
-                (SELECT geom FROM potreros_base WHERE id = :pid AND usuario_id = :uid),
-                ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326)
-            ) AS dentro,
-            ST_IsValid(ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326)) AS valida,
-            ST_Area(ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326)::geography) / 10000.0 AS area_ha
+            SELECT ST_Covers(p.geom, c.geom) AS dentro,
+                   ST_IsValid(c.geom) AS valida,
+                   ST_Area(c.geom::geography) / 10000.0 AS area_ha,
+                   ST_Area(ST_Difference(c.geom, p.geom)::geography) AS fuera_m2
+            FROM (SELECT geom FROM potreros_base WHERE id = :pid AND usuario_id = :uid) p,
+                 (SELECT ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326) AS geom) c
         """),
         {"gj": gj_text, "pid": potrero_id, "uid": usuario_id},
     ).fetchone()
@@ -63,10 +70,11 @@ def validar_contenida(conn, gj_text, potrero_id, usuario_id):
 
 
 def geometria_recortada(conn, gj_text, potrero_id, usuario_id):
-    """Resta las zonas de exclusión del potrero a la geometría candidata.
+    """Recorta la geometría candidata al potrero y resta zonas de exclusión.
 
-    Retorna fila con geom_json (GeoJSON ya recortado) y area_ha resultante.
-    Si no hay exclusiones, devuelve la geometría original.
+    El recorte al potrero elimina el error de coma flotante de los vértices
+    pegados al borde (snap), garantizando que la parcela guardada quede
+    realmente dentro. Retorna fila con geom_json y area_ha resultante.
     """
     row = conn.execute(
         text("""
@@ -77,20 +85,29 @@ def geometria_recortada(conn, gj_text, potrero_id, usuario_id):
                 SELECT ST_Union(z.geom) AS u
                 FROM zonas_exclusion z
                 WHERE z.usuario_id = :uid AND z.potrero_id = :pid
+            ),
+            base AS (
+                SELECT p.geom AS pot,
+                       CASE WHEN e.u IS NULL
+                            THEN c.g
+                            ELSE ST_Difference(c.g, e.u)
+                       END AS g
+                FROM cand c
+                JOIN potreros_base p
+                  ON p.id = :pid AND p.usuario_id = :uid
+                LEFT JOIN exc e ON true
+            ),
+            rec AS (
+                SELECT CASE WHEN g IS NULL OR ST_IsEmpty(g)
+                            THEN NULL
+                            ELSE ST_CollectionExtract(ST_Intersection(g, pot), 3)
+                       END AS g
+                FROM base
             )
             SELECT
-                ST_AsGeoJSON(
-                    CASE WHEN (SELECT u FROM exc) IS NULL
-                         THEN (SELECT g FROM cand)
-                         ELSE ST_Difference((SELECT g FROM cand), (SELECT u FROM exc))
-                    END
-                )::json AS geom_json,
-                ST_Area(
-                    CASE WHEN (SELECT u FROM exc) IS NULL
-                         THEN (SELECT g FROM cand)
-                         ELSE ST_Difference((SELECT g FROM cand), (SELECT u FROM exc))
-                    END::geography
-                ) / 10000.0 AS area_ha
+                ST_AsGeoJSON(g)::json AS geom_json,
+                ST_Area(g::geography) / 10000.0 AS area_ha
+            FROM rec
         """),
         {"gj": gj_text, "pid": potrero_id, "uid": usuario_id},
     ).fetchone()
@@ -119,22 +136,25 @@ def area_choque_exclusiones(conn, gj_text, potrero_id, usuario_id):
 
 def hay_solape(conn, gj_text, potrero_id, usuario_id, excluir_id=None):
     """True si la geometría candidata solapa (>1m²) con alguna hermana."""
+    # Filtro opcional como fragmento: `(:excluir IS NULL OR ...)` hace que
+    # Postgres no pueda inferir el tipo del parámetro None (AmbiguousParameter).
+    filtro_excluir = " AND id != :excluir" if excluir_id is not None else ""
+    params = {"uid": usuario_id, "pid": potrero_id, "gj": gj_text, "tol": SOLAPE_TOL_M2}
+    if excluir_id is not None:
+        params["excluir"] = excluir_id
     row = conn.execute(
-        text("""
+        text(f"""
             SELECT EXISTS(
                 SELECT 1 FROM parcelas
                 WHERE usuario_id = :uid AND potrero_id = :pid
-                  AND (:excluir IS NULL OR id != :excluir)
+                  {filtro_excluir}
                   AND ST_Area(ST_Intersection(
                         geom::geography,
                         ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326)::geography
                       )) > :tol
             ) AS solapa
         """),
-        {
-            "uid": usuario_id, "pid": potrero_id,
-            "excluir": excluir_id, "gj": gj_text, "tol": SOLAPE_TOL_M2,
-        },
+        params,
     ).fetchone()
     return bool(row.solapa) if row else False
 

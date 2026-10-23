@@ -241,7 +241,7 @@ def crear_parcela(
         chk = repo.validar_contenida(conn, gj, potrero_id, uid)
         if not chk or not chk.valida:
             raise HTTPException(status_code=400, detail="Geometría inválida (autointersección). Redibujá el polígono.")
-        if not chk.dentro:
+        if float(chk.fuera_m2 or 0) > repo.FUERA_TOL_M2:
             raise HTTPException(status_code=400, detail="La parcela debe estar dentro del potrero (se permite compartir borde).")
         rec = repo.geometria_recortada(conn, gj, potrero_id, uid)
         gj_final = json.dumps(rec.geom_json) if rec and rec.geom_json else gj
@@ -313,7 +313,7 @@ def actualizar_parcela(
             chk = repo.validar_contenida(conn, gj, pa.potrero_id, uid)
             if not chk or not chk.valida:
                 raise HTTPException(status_code=400, detail="Geometría inválida (autointersección)")
-            if not chk.dentro:
+            if float(chk.fuera_m2 or 0) > repo.FUERA_TOL_M2:
                 raise HTTPException(status_code=400, detail="La parcela debe estar dentro del potrero")
             rec = repo.geometria_recortada(conn, gj, pa.potrero_id, uid)
             gj_final = json.dumps(rec.geom_json) if rec and rec.geom_json else gj

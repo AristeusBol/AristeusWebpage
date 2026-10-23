@@ -294,7 +294,7 @@ select option:disabled {
 .mapa-panel .comp-strip { border-top: 0; padding-top: 0; }
 .map-container { width: 100%; height: 540px; background: var(--map-bg); }
 .map-container.tall { height: 510px; border: 0; border-radius: 0; }
-.map-overlay { position: absolute; top: 52px; left: 8px; right: 8px; background: var(--float-bg-soft); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 8px 12px; font-size: .85rem; color: var(--gg-green-dark); pointer-events: none; }
+.map-overlay { position: absolute; top: 52px; left: 8px; right: 8px; z-index: 4; background: var(--float-bg-soft); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 8px 12px; font-size: .85rem; color: var(--gg-green-dark); pointer-events: none; }
 .map-overlay.error { color: var(--status-error-dark); border-color: var(--status-error-line); pointer-events: auto; }
 .map-submenu { position: absolute; top: 8px; left: 8px; z-index: 2; display: flex; align-items: center; gap: 2px; min-height: 30px; background: var(--float-bg-soft); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 2px; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
 .map-submenu button { border: 0; background: transparent; border-radius: var(--radius-md); padding: 3px 9px; cursor: pointer; font-size: .75rem; font-weight: 600; line-height: 1.35; color: var(--gg-green-dark); }
