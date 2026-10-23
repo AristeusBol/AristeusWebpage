@@ -271,7 +271,10 @@ export default function Mapa() {
 
   const cerrarYGuardar = useCallback(async () => {
     setErrorParc(null);
-    if (selectedId == null) return;
+    if (selectedId == null) {
+      setErrorParc('Elegí un potrero padre primero (clic en el mapa).');
+      return;
+    }
     // Colapsar vértices consecutivos casi idénticos (el doble-clic mete 2 clics
     // en el mismo punto pegado y si no se colapsan el polígono queda inválido).
     const limpios = vertices.filter((v, i) => {
@@ -508,11 +511,11 @@ export default function Mapa() {
               {dibujando && (
                 <>
                 <div className="map-dibujo-hint" aria-live="polite">
-                  Clic: vértice ({vertices.length}) · se pega a bordes y esquinas · doble-clic o ✓: cerrar · Esc: cancelar
+                  {guardandoParc ? 'Guardando parcela…' : `Clic: vértice (${vertices.length}) · se pega a bordes y esquinas · doble-clic o ✓: cerrar · Esc: cancelar`}
                 </div>
                 <div className="map-dibujo-bar" role="group" aria-label="Dibujo de parcela">
-                  <span className="dibujo-nombre" title={nombreSug ? `Se guardará como ${nombreSug}` : 'Dibujando parcela'}>
-                    {nombreSug || `en ${lotes.find((l) => l.id === selectedId)?.nombre ?? '…'}`}
+                  <span className="dibujo-nombre" title={nombreSug ? `Potrero padre: ${loteSeleccionado?.nombre ?? '—'} · se guardará como ${nombreSug}` : 'Dibujando parcela'}>
+                    {loteSeleccionado?.nombre ? `en ${loteSeleccionado.nombre} · ` : ''}{nombreSug || '…'}
                   </span>
                   <button type="button" onClick={() => setVertices((v) => v.slice(0, -1))} disabled={vertices.length === 0} title="Deshacer último vértice" aria-label="Deshacer último vértice">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

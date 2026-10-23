@@ -19,18 +19,26 @@ cd grassgauge-api && cp .env.example .env && cd ..
 cd grassgauge-web  && cp .env.example .env && cd ..
 
 # 2. Base de datos + API (Docker)
-docker compose -f infra/docker-compose.yml up -d --build
+docker compose -f infra/docker-compose.yml up -d db api
 
-# 3. Frontend
+# 3. Frontend (la primera vez, instalar dependencias)
 cd grassgauge-web
 npm install
 npm run dev
 ```
 
-- Web: http://localhost:5173 (proxy `/api` y `/uploads` → API).
+- Web: http://localhost:5173/app/ (Vite proxea `/api` y `/uploads` → API).
 - API: http://localhost:8000 — docs en http://localhost:8000/docs
 - BD PostGIS: `localhost:5433` (inicializada automáticamente al primer arranque).
 - Usuario de prueba: `dpoloalcoba@gmail.com` / `123456`
+
+> El proxy de Vite apunta por defecto a `http://localhost:8000`, que es el
+> caso de `npm run dev` en el host. Si corrés el frontend **dentro de Docker**
+> (`docker-compose.yml` raíz), ese compose define
+> `VITE_PROXY_TARGET=http://backend:8000` para resolver el servicio interno.
+> Si ves `http proxy error: ... ENOTFOUND backend`, estás corriendo el dev
+> server en el host sin ese override: revisá que no tengas `VITE_PROXY_TARGET`
+> exportado en el shell.
 
 ## Cómo levantar cada parte por separado
 

@@ -57,7 +57,7 @@ def test_crear_parcela_estado_invalido_422():
 
 def test_crear_parcela_fuera_del_potrero_400():
     pot = MagicMock(id=1, nombre="P1", finca="F")
-    chk = MagicMock(dentro=False, valida=True, area_ha=5.0)
+    chk = MagicMock(dentro=False, valida=True, area_ha=5.0, fuera_m2=10.0)
     with patch("api.routers.parcelas.repo.potrero_del_usuario", return_value=pot), \
          patch("api.routers.parcelas.repo.validar_contenida", return_value=chk):
         resp = client.post("/api/potreros/1/parcelas",
@@ -66,9 +66,27 @@ def test_crear_parcela_fuera_del_potrero_400():
     assert "dentro del potrero" in resp.json()["detail"]
 
 
+def test_crear_parcela_borde_snap_tolerancia_201():
+    """Un vértice pegado al borde puede quedar a fracción de mm afuera por
+    redondeo. Debe aceptarse y guardarse recortado, no fallar con 400."""
+    pot = MagicMock(id=1, nombre="P1", finca="F")
+    chk = MagicMock(dentro=False, valida=True, area_ha=5.0, fuera_m2=0.0001)
+    rec = MagicMock(geom_json=POLI, area_ha=5.0)
+    ins = MagicMock(id=11, area_ha=5.0)
+    with patch("api.routers.parcelas.repo.potrero_del_usuario", return_value=pot), \
+         patch("api.routers.parcelas.repo.validar_contenida", return_value=chk), \
+         patch("api.routers.parcelas.repo.geometria_recortada", return_value=rec), \
+         patch("api.routers.parcelas.repo.hay_solape", return_value=False), \
+         patch("api.routers.parcelas.repo.siguiente_nombre_parcela", return_value="P1_1"), \
+         patch("api.routers.parcelas.repo.insertar_parcela", return_value=ins):
+        resp = client.post("/api/potreros/1/parcelas",
+                           json={"geom": POLI}, headers=auth_headers(1))
+    assert resp.status_code == 201
+
+
 def test_crear_parcela_solapada_409():
     pot = MagicMock(id=1, nombre="P1", finca="F")
-    chk = MagicMock(dentro=True, valida=True, area_ha=5.0)
+    chk = MagicMock(dentro=True, valida=True, area_ha=5.0, fuera_m2=0.0)
     with patch("api.routers.parcelas.repo.potrero_del_usuario", return_value=pot), \
          patch("api.routers.parcelas.repo.validar_contenida", return_value=chk), \
          patch("api.routers.parcelas.repo.hay_solape", return_value=True):
@@ -80,7 +98,7 @@ def test_crear_parcela_solapada_409():
 def test_crear_parcela_pisa_exclusion_recorta_201():
     """Pisar exclusión ya no bloquea: se recorta y guarda (201)."""
     pot = MagicMock(id=1, nombre="A1", finca="F")
-    chk = MagicMock(dentro=True, valida=True, area_ha=5.0)
+    chk = MagicMock(dentro=True, valida=True, area_ha=5.0, fuera_m2=0.0)
     rec = MagicMock(geom_json=POLI, area_ha=4.5)
     ins = MagicMock(id=10, area_ha=4.5)
     with patch("api.routers.parcelas.repo.potrero_del_usuario", return_value=pot), \
@@ -97,7 +115,7 @@ def test_crear_parcela_pisa_exclusion_recorta_201():
 
 def test_crear_parcela_recorte_muy_chico_400():
     pot = MagicMock(id=1, nombre="A1", finca="F")
-    chk = MagicMock(dentro=True, valida=True, area_ha=5.0)
+    chk = MagicMock(dentro=True, valida=True, area_ha=5.0, fuera_m2=0.0)
     rec = MagicMock(geom_json=POLI, area_ha=0.001)
     with patch("api.routers.parcelas.repo.potrero_del_usuario", return_value=pot), \
          patch("api.routers.parcelas.repo.validar_contenida", return_value=chk), \
