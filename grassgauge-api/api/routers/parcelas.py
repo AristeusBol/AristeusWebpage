@@ -6,13 +6,21 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
-from api.routers.potreros import _prorrateo
 from api.schemas import ParcelaCreate, ParcelaUpdate
 from core.db import engine
 from core.seguridad import get_current_user_id
+from dominio.stock import prorrateo as _prorrateo
 from repositorios import parcelas as repo
+from repositorios.parcelas import zonales_finca as _zonales_finca
 
 router = APIRouter(tags=["parcelas"])
+
+
+def _potrero_o_404(conn, potrero_id, uid):
+    pot = repo.potrero_del_usuario(conn, potrero_id, uid)
+    if not pot:
+        raise HTTPException(status_code=404, detail=f"Potrero {potrero_id} no existe o no es tuyo")
+    return pot
 
 
 def _feature_parcela(pa, finca, fecha_iso, calc=None, zonal=None):
@@ -34,94 +42,6 @@ def _feature_parcela(pa, finca, fecha_iso, calc=None, zonal=None):
     }
 
 
-def _zonal_row_to_dict(n, vmean, mmean, tmean, area_ha):
-    n = int(n or 0)
-    area_ha = float(area_ha) if area_ha is not None else None
-    if n == 0 or area_ha is None or area_ha <= 0:
-        return {
-            "masa_verde_kg": None, "masa_muerta_kg": None, "masa_total_kg": None,
-            "t_ha_verde": None, "t_ha_muerta": None, "t_ha_total": None,
-            "tiene_calculo": False, "estimado_zonal": False,
-            "n_puntos": n, "area_ha": area_ha,
-        }
-    if vmean is None or mmean is None or tmean is None:
-        return {
-            "masa_verde_kg": None, "masa_muerta_kg": None, "masa_total_kg": None,
-            "t_ha_verde": None, "t_ha_muerta": None, "t_ha_total": None,
-            "tiene_calculo": False, "estimado_zonal": False,
-            "n_puntos": n, "area_ha": area_ha,
-        }
-    vmean = float(vmean)
-    mmean = float(mmean)
-    tmean = float(tmean)
-    area_m2 = area_ha * 10000.0
-    return {
-        "masa_verde_kg": vmean * area_m2 / 1000.0,
-        "masa_muerta_kg": mmean * area_m2 / 1000.0,
-        "masa_total_kg": tmean * area_m2 / 1000.0,
-        "t_ha_verde": vmean * 0.01,
-        "t_ha_muerta": mmean * 0.01,
-        "t_ha_total": tmean * 0.01,
-        "densidad_promedio_verde_g_m2": vmean,
-        "densidad_promedio_muerta_g_m2": mmean,
-        "densidad_promedio_total_g_m2": tmean,
-        "tiene_calculo": True, "estimado_zonal": True,
-        "n_puntos": n, "area_ha": area_ha,
-    }
-
-
-def _zonales_finca(conn, uid, fecha_iso, rows):
-    """Promedios zonales por parcela en una sola consulta (misma formula que potrero)."""
-    if not fecha_iso or not rows:
-        return {}
-    pids = sorted({r.potrero_id for r in rows})
-    res = conn.execute(
-        text("""
-            WITH pa AS (
-                SELECT id, potrero_id, geom FROM parcelas
-                WHERE usuario_id = :uid
-                  AND potrero_id = ANY(:pids)
-            ),
-            area AS (
-                SELECT pa.id AS pid,
-                       ST_Area(COALESCE(
-                           ST_Difference(pa.geom, u.u),
-                           pa.geom
-                       )::geography) / 10000.0 AS area_ha
-                FROM pa
-                LEFT JOIN LATERAL (
-                    SELECT ST_Union(z.geom) AS u FROM zonas_exclusion z
-                    WHERE z.usuario_id = :uid AND z.potrero_id = pa.potrero_id
-                ) u ON true
-            )
-            SELECT pa.id AS pid,
-                   COUNT(m.geom) AS n,
-                   AVG(m.densidad_verde_g_m2) AS vmean,
-                   AVG(m.densidad_muerta_g_m2) AS mmean,
-                   AVG(m.densidad_total_g_m2) AS tmean,
-                   MAX(area.area_ha) AS area_ha
-            FROM pa
-            JOIN area ON area.pid = pa.id
-            LEFT JOIN mapa_color m
-              ON m.usuario_id = :uid
-             AND m.potrero_id = pa.potrero_id
-             AND m.fecha = :fecha
-             AND ST_Covers(pa.geom, m.geom)
-             AND NOT EXISTS (
-                 SELECT 1 FROM zonas_exclusion z
-                 WHERE z.usuario_id = m.usuario_id AND z.potrero_id = m.potrero_id
-                   AND ST_Covers(z.geom, m.geom)
-             )
-            GROUP BY pa.id
-        """),
-        {"uid": uid, "pids": pids, "fecha": fecha_iso},
-    ).fetchall()
-    out = {}
-    for r in res:
-        out[int(r.pid)] = _zonal_row_to_dict(r.n, r.vmean, r.mmean, r.tmean, r.area_ha)
-    return out
-
-
 @router.get("/api/potreros/{potrero_id}/parcelas")
 def listar_parcelas(
     potrero_id: int,
@@ -130,9 +50,7 @@ def listar_parcelas(
 ):
     """Parcelas de un potrero como FeatureCollection (promedio zonal si hay fecha)."""
     with engine.connect() as conn:
-        pot = repo.potrero_del_usuario(conn, potrero_id, uid)
-        if not pot:
-            raise HTTPException(status_code=404, detail=f"Potrero {potrero_id} no existe o no es tuyo")
+        pot = _potrero_o_404(conn, potrero_id, uid)
         rows = repo.listar_parcelas_potrero(conn, potrero_id, uid)
         fecha_iso = fecha.isoformat() if fecha else None
         zonales = _zonales_finca(conn, uid, fecha_iso, rows)
@@ -219,9 +137,7 @@ def sugerir_nombre(
 ):
     """Sugiere '<Potrero>_N' libre (primer hueco desde 1)."""
     with engine.connect() as conn:
-        pot = repo.potrero_del_usuario(conn, potrero_id, uid)
-        if not pot:
-            raise HTTPException(status_code=404, detail=f"Potrero {potrero_id} no existe o no es tuyo")
+        pot = _potrero_o_404(conn, potrero_id, uid)
         nombre = repo.siguiente_nombre_parcela(conn, potrero_id, uid, pot.nombre)
     return {"potrero_id": potrero_id, "nombre_sugerido": nombre}
 
@@ -235,9 +151,7 @@ def crear_parcela(
     """Crea una parcela dibujada dentro del potrero (nombre auto, recorte de exclusiones)."""
     gj = repo.geom_geojson_text(body.geom)
     with engine.connect() as conn:
-        pot = repo.potrero_del_usuario(conn, potrero_id, uid)
-        if not pot:
-            raise HTTPException(status_code=404, detail=f"Potrero {potrero_id} no existe o no es tuyo")
+        pot = _potrero_o_404(conn, potrero_id, uid)
         chk = repo.validar_contenida(conn, gj, potrero_id, uid)
         if not chk or not chk.valida:
             raise HTTPException(status_code=400, detail="Geometría inválida (autointersección). Redibujá el polígono.")

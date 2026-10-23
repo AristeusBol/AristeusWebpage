@@ -30,34 +30,3 @@ def upsert_calculo(conn, potrero_id, finca, fecha, area_neta_ha, masa_seca_verde
         "muerta": masa_seca_muerta,
         "total": masa_seca_total,
     })
-
-
-def listar_calculos_por_potrero(conn, potrero_id, usuario_id=None):
-    if usuario_id is not None:
-        consulta = text("""
-            SELECT id, potrero_id, finca, fecha, area_neta_ha, masa_seca_verde,
-                   masa_seca_muerta, masa_seca_total
-            FROM calculos_stock
-            WHERE potrero_id = :pid AND usuario_id = :uid
-            ORDER BY fecha DESC, id DESC
-        """)
-        res = conn.execute(consulta, {"pid": potrero_id, "uid": usuario_id}).fetchall()
-    else:
-        consulta = text("""
-            SELECT id, potrero_id, finca, fecha, area_neta_ha, masa_seca_verde,
-                   masa_seca_muerta, masa_seca_total
-            FROM calculos_stock
-            WHERE potrero_id = :pid
-            ORDER BY fecha DESC, id DESC
-        """)
-        res = conn.execute(consulta, {"pid": potrero_id}).fetchall()
-    return [{
-        "id": row.id,
-        "potrero_id": row.potrero_id,
-        "finca": row.finca,
-        "fecha": row.fecha.isoformat(),
-        "area_neta_ha": float(row.area_neta_ha) if row.area_neta_ha is not None else None,
-        "masa_seca_verde": float(row.masa_seca_verde) if row.masa_seca_verde is not None else None,
-        "masa_seca_muerta": float(row.masa_seca_muerta) if row.masa_seca_muerta is not None else None,
-        "masa_seca_total": float(row.masa_seca_total) if row.masa_seca_total is not None else None,
-    } for row in res]

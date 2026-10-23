@@ -64,7 +64,7 @@ def _mock_hist_engine(valores, dueno=True):
 
 def test_histograma_ok():
     eng, conn = _mock_hist_engine([10.0, 20.0, 30.0, 40.0], dueno=None)
-    with patch("api.routers.mapa.engine", eng):
+    with patch("servicios.histograma.engine", eng):
         resp = client.get("/api/mapa/histograma?finca=F&fecha=2024-04-01&bins=5", headers=auth_headers(1))
     assert resp.status_code == 200
     data = resp.json()
@@ -91,13 +91,13 @@ def test_histograma_ok():
 
 def test_histograma_potrero_ok_y_404():
     eng, _ = _mock_hist_engine([10.0, 20.0], dueno=True)
-    with patch("api.routers.mapa.engine", eng):
+    with patch("servicios.histograma.engine", eng):
         resp = client.get("/api/mapa/histograma?finca=F&fecha=2024-04-01&bins=5&potrero_id=3", headers=auth_headers(1))
     assert resp.status_code == 200
     assert resp.json()["filtros"]["potrero_id"] == 3
 
     eng, _ = _mock_hist_engine([10.0, 20.0], dueno=False)
-    with patch("api.routers.mapa.engine", eng):
+    with patch("servicios.histograma.engine", eng):
         resp = client.get("/api/mapa/histograma?finca=F&fecha=2024-04-01&bins=5&potrero_id=999", headers=auth_headers(1))
     assert resp.status_code == 404
 
@@ -109,7 +109,7 @@ def test_histograma_sin_auth_401():
 
 def test_histograma_valor_unico_un_bin():
     eng, _ = _mock_hist_engine([50.0, 50.0], dueno=None)
-    with patch("api.routers.mapa.engine", eng):
+    with patch("servicios.histograma.engine", eng):
         resp = client.get("/api/mapa/histograma?finca=F&fecha=2024-04-01&bins=5", headers=auth_headers(1))
     data = resp.json()
     assert data["sin_datos"] is False
@@ -121,7 +121,7 @@ def test_histograma_valor_unico_un_bin():
 
 def test_histograma_sin_datos():
     eng, _ = _mock_hist_engine([], dueno=None)
-    with patch("api.routers.mapa.engine", eng):
+    with patch("servicios.histograma.engine", eng):
         resp = client.get("/api/mapa/histograma?finca=Vacia&fecha=2024-04-01", headers=auth_headers(1))
     assert resp.status_code == 200
     data = resp.json()
@@ -140,7 +140,7 @@ def test_histograma_sin_potrero_no_envia_pid_nulo():
     ahora es un fragmento condicional que se omite cuando no aplica.
     """
     eng, conn = _mock_hist_engine([10.0, 20.0], dueno=None)
-    with patch("api.routers.mapa.engine", eng):
+    with patch("servicios.histograma.engine", eng):
         resp = client.get("/api/mapa/histograma?finca=F&fecha=2024-04-01&bins=5", headers=auth_headers(1))
     assert resp.status_code == 200
     for call in conn.execute.call_args_list:
@@ -153,7 +153,7 @@ def test_histograma_sin_potrero_no_envia_pid_nulo():
 def test_histograma_con_potrero_si_filtra_por_pid():
     """Con potrero_id, las queries de área/stats/buckets sí filtran por :pid."""
     eng, conn = _mock_hist_engine([10.0, 20.0], dueno=True)
-    with patch("api.routers.mapa.engine", eng):
+    with patch("servicios.histograma.engine", eng):
         resp = client.get("/api/mapa/histograma?finca=F&fecha=2024-04-01&bins=5&potrero_id=3", headers=auth_headers(1))
     assert resp.status_code == 200
     con_pid = [str(call[0][0]) for call in conn.execute.call_args_list if ":pid" in str(call[0][0])]
@@ -167,7 +167,7 @@ def test_histograma_con_potrero_si_filtra_por_pid():
 def test_histograma_parcela_ok_y_404():
     parc = MagicMock(potrero_id=7, geom_json={"type": "Polygon", "coordinates": []})
     eng, conn = _mock_hist_engine([10.0, 20.0], dueno=parc)
-    with patch("api.routers.mapa.engine", eng):
+    with patch("servicios.histograma.engine", eng):
         resp = client.get("/api/mapa/histograma?finca=F&fecha=2024-04-01&bins=5&parcela_id=9", headers=auth_headers(1))
     assert resp.status_code == 200
     data = resp.json()
@@ -179,7 +179,7 @@ def test_histograma_parcela_ok_y_404():
     assert "ST_Covers(ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326), m.geom)" in all_sql
 
     eng, _ = _mock_hist_engine([10.0, 20.0], dueno=False)
-    with patch("api.routers.mapa.engine", eng):
+    with patch("servicios.histograma.engine", eng):
         resp = client.get("/api/mapa/histograma?finca=F&fecha=2024-04-01&bins=5&parcela_id=999", headers=auth_headers(1))
     assert resp.status_code == 404
 
@@ -187,13 +187,13 @@ def test_histograma_parcela_ok_y_404():
 def test_histograma_potrero_y_parcela_consistente_200_y_mismatch_400():
     parc = MagicMock(potrero_id=7, geom_json={"type": "Polygon", "coordinates": []})
     eng, _ = _mock_hist_engine([10.0, 20.0], dueno=parc)
-    with patch("api.routers.mapa.engine", eng):
+    with patch("servicios.histograma.engine", eng):
         resp = client.get("/api/mapa/histograma?finca=F&fecha=2024-04-01&bins=5&potrero_id=7&parcela_id=9", headers=auth_headers(1))
     assert resp.status_code == 200
     assert resp.json()["filtros"]["parcela_id"] == 9
 
     parc = MagicMock(potrero_id=7, geom_json={"type": "Polygon", "coordinates": []})
     eng, _ = _mock_hist_engine([10.0, 20.0], dueno=parc)
-    with patch("api.routers.mapa.engine", eng):
+    with patch("servicios.histograma.engine", eng):
         resp = client.get("/api/mapa/histograma?finca=F&fecha=2024-04-01&potrero_id=3&parcela_id=9", headers=auth_headers(1))
     assert resp.status_code == 400

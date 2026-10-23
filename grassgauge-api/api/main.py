@@ -6,9 +6,8 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from core.config import CORS_ORIGINS
+from core.config import CORS_ORIGINS, UPLOAD_DIR
 from api.routers import auth, balance, calibracion, dashboard, filtros, mapa, parcelas, potreros, rodeos, rotacion
-from api.routers.calibracion import UPLOAD_DIR
 
 
 @asynccontextmanager
@@ -53,6 +52,7 @@ app.include_router(filtros.router)
 app.include_router(mapa.router)
 app.include_router(dashboard.router)
 app.include_router(potreros.router)
+app.include_router(potreros.router_calibracion)
 app.include_router(parcelas.router)
 app.include_router(rodeos.router)
 app.include_router(rotacion.router)

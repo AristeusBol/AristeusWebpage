@@ -368,3 +368,55 @@ def serie_zonal_parcela(conn, parcela_id, usuario_id):
         """),
         {"parc": parcela_id, "uid": usuario_id},
     ).fetchall()
+
+
+def zonales_finca(conn, uid, fecha_iso, rows):
+    """Promedios zonales por parcela en una sola consulta (misma fórmula que potrero)."""
+    if not fecha_iso or not rows:
+        return {}
+    pids = sorted({r.potrero_id for r in rows})
+    res = conn.execute(
+        text("""
+            WITH pa AS (
+                SELECT id, potrero_id, geom FROM parcelas
+                WHERE usuario_id = :uid
+                  AND potrero_id = ANY(:pids)
+            ),
+            area AS (
+                SELECT pa.id AS pid,
+                       ST_Area(COALESCE(
+                           ST_Difference(pa.geom, u.u),
+                           pa.geom
+                       )::geography) / 10000.0 AS area_ha
+                FROM pa
+                LEFT JOIN LATERAL (
+                    SELECT ST_Union(z.geom) AS u FROM zonas_exclusion z
+                    WHERE z.usuario_id = :uid AND z.potrero_id = pa.potrero_id
+                ) u ON true
+            )
+            SELECT pa.id AS pid,
+                   COUNT(m.geom) AS n,
+                   AVG(m.densidad_verde_g_m2) AS vmean,
+                   AVG(m.densidad_muerta_g_m2) AS mmean,
+                   AVG(m.densidad_total_g_m2) AS tmean,
+                   MAX(area.area_ha) AS area_ha
+            FROM pa
+            JOIN area ON area.pid = pa.id
+            LEFT JOIN mapa_color m
+              ON m.usuario_id = :uid
+             AND m.potrero_id = pa.potrero_id
+             AND m.fecha = :fecha
+             AND ST_Covers(pa.geom, m.geom)
+             AND NOT EXISTS (
+                 SELECT 1 FROM zonas_exclusion z
+                 WHERE z.usuario_id = m.usuario_id AND z.potrero_id = m.potrero_id
+                   AND ST_Covers(z.geom, m.geom)
+             )
+            GROUP BY pa.id
+        """),
+        {"uid": uid, "pids": pids, "fecha": fecha_iso},
+    ).fetchall()
+    return {
+        int(r.pid): zonal_row_to_dict(r.n, r.vmean, r.mmean, r.tmean, r.area_ha)
+        for r in res
+    }

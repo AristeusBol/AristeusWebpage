@@ -7,57 +7,27 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from api.schemas import PotreroCreate, PotreroUpdate
+from core.config import UPLOAD_DIR
 from core.db import engine
 from core.seguridad import get_current_user_id
+from dominio.conversion import t_ha as _t_ha
+from dominio.constantes import AREA_MIN_HA
+from repositorios import potreros as repo_potreros
 
 router = APIRouter(prefix="/api/potreros", tags=["potreros"])
+# Rutas heredadas de calibración: conservan su tag para no alterar el OpenAPI.
+router_calibracion = APIRouter(prefix="/api/potreros", tags=["calibracion"])
 
 
-def _t_ha(masa_kg, area_ha) -> Optional[float]:
-    try:
-        if masa_kg is None or area_ha is None or float(area_ha) <= 0:
-            return None
-        return float(masa_kg) / 1000.0 / float(area_ha)
-    except (TypeError, ValueError):
-        return None
-
-
-def _prorrateo(area_parcela_ha, calc):
-    """Prorratea el cálculo del potrero padre a una parcela por área.
-
-    Retorna dict con masas/t_ha + flag estimado_por_prorrateo.
-    """
-    if calc is None:
-        return {
-            "masa_verde_kg": None, "masa_muerta_kg": None, "masa_total_kg": None,
-            "t_ha_verde": None, "t_ha_muerta": None, "t_ha_total": None,
-            "tiene_calculo": False, "estimado_por_prorrateo": False,
-        }
-    try:
-        area_neta = float(calc.area_neta_ha) if calc.area_neta_ha is not None else 0
-    except (TypeError, ValueError):
-        area_neta = 0
-    if not area_neta or area_neta <= 0 or not area_parcela_ha or area_parcela_ha <= 0:
-        return {
-            "masa_verde_kg": None, "masa_muerta_kg": None, "masa_total_kg": None,
-            "t_ha_verde": _t_ha(calc.masa_seca_verde, calc.area_neta_ha),
-            "t_ha_muerta": _t_ha(calc.masa_seca_muerta, calc.area_neta_ha),
-            "t_ha_total": _t_ha(calc.masa_seca_total, calc.area_neta_ha),
-            "tiene_calculo": calc.masa_seca_total is not None,
-            "estimado_por_prorrateo": False,
-        }
-    ratio = float(area_parcela_ha) / float(area_neta)
-    verde = float(calc.masa_seca_verde) * ratio if calc.masa_seca_verde is not None else None
-    muerta = float(calc.masa_seca_muerta) * ratio if calc.masa_seca_muerta is not None else None
-    total = float(calc.masa_seca_total) * ratio if calc.masa_seca_total is not None else None
-    return {
-        "masa_verde_kg": verde, "masa_muerta_kg": muerta, "masa_total_kg": total,
-        "t_ha_verde": _t_ha(calc.masa_seca_verde, calc.area_neta_ha),
-        "t_ha_muerta": _t_ha(calc.masa_seca_muerta, calc.area_neta_ha),
-        "t_ha_total": _t_ha(calc.masa_seca_total, calc.area_neta_ha),
-        "tiene_calculo": total is not None,
-        "estimado_por_prorrateo": total is not None,
-    }
+def _validar_geometria(conn, gj: str):
+    """Valida la geometría candidata (autointersección + área)."""
+    return conn.execute(
+        text("""
+            SELECT ST_IsValid(ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326)) AS valida,
+                   ST_Area(ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326)::geography)/10000.0 AS area_ha
+        """),
+        {"gj": gj},
+    ).fetchone()
 
 
 @router.get("/geojson")
@@ -150,6 +120,31 @@ def listar_fincas_con_potreros(
     return {"fincas": [r.finca for r in rows]}
 
 
+@router_calibracion.get("")
+def listar_mis_potreros(
+    uid: int = Depends(get_current_user_id),
+):
+    """Lista liviana de potreros del usuario para el selector de calibración."""
+    with engine.connect() as conn:
+        rows = repo_potreros.listar_potreros(conn, uid)
+    return {
+        "potreros": [{"id": r.id, "nombre": r.nombre, "finca": r.finca} for r in rows],
+    }
+
+
+@router_calibracion.get("/{potrero_id}")
+def detalle_potrero(
+    potrero_id: int,
+    uid: int = Depends(get_current_user_id),
+):
+    """Potrero + exclusiones como GeoJSON para el mapa de marcado de punto."""
+    with engine.connect() as conn:
+        fc = repo_potreros.potrero_y_exclusiones_geojson(conn, potrero_id, uid)
+    if fc is None:
+        raise HTTPException(status_code=404, detail=f"Potrero {potrero_id} no existe o no es tuyo")
+    return fc
+
+
 @router.post("", status_code=201)
 def crear_potrero(
     body: PotreroCreate,
@@ -160,16 +155,10 @@ def crear_potrero(
     # Validar la candidata ANTES de persistir: evita insertar para luego
     # borrar si la geometría es inválida o muy chica.
     with engine.connect() as conn:
-        chk_prev = conn.execute(
-            text("""
-                SELECT ST_IsValid(ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326)) AS valida,
-                       ST_Area(ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326)::geography)/10000.0 AS area_ha
-            """),
-            {"gj": gj},
-        ).fetchone()
+        chk_prev = _validar_geometria(conn, gj)
     if not chk_prev.valida:
         raise HTTPException(status_code=400, detail="Geometría inválida (autointersección). Redibujá el polígono.")
-    if float(chk_prev.area_ha or 0) < 0.01:
+    if float(chk_prev.area_ha or 0) < AREA_MIN_HA:
         raise HTTPException(status_code=400, detail="Área mínima 0.01 ha. Dibujá un polígono más grande.")
     try:
         with engine.begin() as conn:
@@ -212,24 +201,18 @@ def actualizar_potrero(
     if body.nombre is not None:
         sets.append("nombre = :nombre")
         params["nombre"] = body.nombre
-    if body.geom is not None:
+    gj_cand = json.dumps(body.geom) if body.geom is not None else None
+    if gj_cand is not None:
         sets.append("geom = ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326)")
-        params["gj"] = json.dumps(body.geom)
+        params["gj"] = gj_cand
     if not sets:
         raise HTTPException(status_code=400, detail="Nada para actualizar")
     # Si cambia la geometría: validar la candidata ANTES de persistir.
     # Antes se hacía UPDATE y luego se validaba, dejando geometrías
     # inválidas guardadas si la validación fallaba.
-    if body.geom is not None:
-        gj_cand = json.dumps(body.geom)
+    if gj_cand is not None:
         with engine.connect() as conn:
-            chk_prev = conn.execute(
-                text("""
-                    SELECT ST_IsValid(ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326)) AS valida,
-                           ST_Area(ST_SetSRID(ST_GeomFromGeoJSON(:gj), 4326)::geography)/10000.0 AS area_ha
-                """),
-                {"gj": gj_cand},
-            ).fetchone()
+            chk_prev = _validar_geometria(conn, gj_cand)
             fuera_prev = conn.execute(
                 text("""
                     SELECT COUNT(*) AS n FROM parcelas
@@ -240,7 +223,7 @@ def actualizar_potrero(
             ).fetchone()
         if not chk_prev.valida:
             raise HTTPException(status_code=400, detail="Geometría inválida (autointersección)")
-        if float(chk_prev.area_ha or 0) < 0.01:
+        if float(chk_prev.area_ha or 0) < AREA_MIN_HA:
             raise HTTPException(status_code=400, detail="Área mínima 0.01 ha. Dibujá un polígono más grande.")
         if fuera_prev and int(fuera_prev.n or 0) > 0:
             raise HTTPException(
@@ -294,16 +277,12 @@ def eliminar_potrero(
     # Las filas de fotos se borran por cascada FK, pero los archivos en
     # disco quedarían huérfanos: eliminarlos aquí.
     fotos_borradas = 0
-    try:
-        from api.routers.calibracion import UPLOAD_DIR as _UPLOAD_DIR
-        for fp in (row.foto_paths or []):
-            try:
-                (_UPLOAD_DIR / fp).unlink(missing_ok=True)
-                fotos_borradas += 1
-            except OSError:
-                pass
-    except Exception:
-        pass
+    for fp in (row.foto_paths or []):
+        try:
+            (UPLOAD_DIR / fp).unlink(missing_ok=True)
+            fotos_borradas += 1
+        except OSError:
+            pass
     return {
         "id": potrero_id, "eliminado": True,
         "parcelas_eliminadas": int(row.n_parc or 0),

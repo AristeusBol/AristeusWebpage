@@ -14,6 +14,11 @@ from repositorios import calculos
 
 TABLAS_PERMITIDAS = {"mapa_color", "potreros_base", "zonas_exclusion"}
 
+
+def _abortar(msg: str) -> int:
+    print(msg)
+    return 1
+
 ESQUEMA_CSV = {
     "mapa_color": [
         ["usuario_id", "potrero_id", "finca", "fecha", "latitud", "longitud", "densidad_verde_g_m2", "densidad_muerta_g_m2", "densidad_total_g_m2", "origen"],
@@ -406,33 +411,21 @@ def _refrescar_celdas(gdf, tabla):
 
 def principal():
     parser = argparse.ArgumentParser(description="Ingesta simple: sube CSV solo si está completo y columnas coinciden")
-    parser.add_argument(
-        "--archivo",
-        type=str,
-        default=str(DATOS_DIR / "mapa_color.csv"),
-        help="Ruta al archivo CSV (por defecto: datos/mapa_color.csv)",
-    )
+    parser.add_argument("--archivo", default=str(DATOS_DIR / "mapa_color.csv"),
+                        help="Ruta al archivo CSV (por defecto: datos/mapa_color.csv)")
     parser.add_argument("--tabla", required=True, help="Tabla destino en PostGIS")
-    parser.add_argument(
-        "--encoding",
-        type=str,
-        default=None,
-        help="Fuerza la codificación del CSV (por defecto: UTF-8)",
-    )
-    parser.add_argument(
-        "--sin-calcular",
-        action="store_true",
-        help="Solo para mapa_color: no calcula ni guarda el stock tras ingerir",
-    )
+    parser.add_argument("--encoding", default=None,
+                        help="Fuerza la codificación del CSV (por defecto: UTF-8)")
+    parser.add_argument("--sin-calcular", action="store_true",
+                        help="Solo para mapa_color: no calcula ni guarda el stock tras ingerir")
 
     args = parser.parse_args()
 
     if args.tabla not in TABLAS_PERMITIDAS:
-        print(
+        return _abortar(
             f"[X] Tabla '{args.tabla}' no permitida. Elegí una de: "
             f"{', '.join(sorted(TABLAS_PERMITIDAS))}. Abortando ingesta; no se insertó nada."
         )
-        return 1
 
     print(f"[*] Leyendo archivo {args.archivo}...")
     try:
@@ -440,28 +433,21 @@ def principal():
         if df is None:
             return 1
     except Exception as e:
-        print(f"[X] Error crítico al leer el archivo CSV: {e}")
-        return 1
+        return _abortar(f"[X] Error crítico al leer el archivo CSV: {e}")
 
-    error_esquema = _validar_esquema(df, args.tabla)
-    if error_esquema:
-        print(error_esquema)
-        return 1
+    if (error_esquema := _validar_esquema(df, args.tabla)):
+        return _abortar(error_esquema)
 
     for col in ("finca", "nombre", "tipo", "origen"):
         if col in df.columns and df[col].dtype == object:
             df[col] = df[col].astype(str).str.strip()
 
-    error_completitud = _validar_completitud(df)
-    if error_completitud:
-        print(error_completitud)
-        return 1
+    if (error_completitud := _validar_completitud(df)):
+        return _abortar(error_completitud)
 
     if args.tabla == "mapa_color":
-        error_densidades = _validar_densidades(df)
-        if error_densidades:
-            print(error_densidades)
-            return 1
+        if (error_densidades := _validar_densidades(df)):
+            return _abortar(error_densidades)
 
     if "latitud" in df.columns and "longitud" in df.columns:
         lat = pd.to_numeric(df["latitud"], errors="coerce")
@@ -469,12 +455,11 @@ def principal():
         invalidas = lat.isna() | lon.isna()
         if invalidas.any():
             n = int(invalidas.sum())
-            print(
+            return _abortar(
                 f"[X] {n} filas sin coordenadas válidas (latitud/longitud faltante o no numérica). "
-                "Abortando ingesta; no se insertó nada."
+                "Abortando ingesta; no se insertó nada.\n"
+                "    ¿Tu CSV usa coma decimal (ej. 32,0401)? Convertila a punto antes."
             )
-            print("    ¿Tu CSV usa coma decimal (ej. 32,0401)? Convertila a punto antes.")
-            return 1
         gdf = gpd.GeoDataFrame(
             df,
             geometry=gpd.points_from_xy(lon, lat),
@@ -486,39 +471,29 @@ def principal():
         invalidas = geometry.isna()
         if invalidas.any():
             n = int(invalidas.sum())
-            print(f"[X] {n} filas con WKT inválido o vacío. Abortando ingesta; no se insertó nada.")
-            return 1
+            return _abortar(f"[X] {n} filas con WKT inválido o vacío. Abortando ingesta; no se insertó nada.")
         gdf = gpd.GeoDataFrame(df, geometry=geometry, crs="EPSG:4326")
         gdf = gdf.drop(columns=["wkt"])
     else:
-        print("[X] El CSV no contiene columnas espaciales válidas ('latitud/longitud' o 'wkt'). Abortando ingesta; no se insertó nada.")
-        return 1
+        return _abortar("[X] El CSV no contiene columnas espaciales válidas ('latitud/longitud' o 'wkt'). Abortando ingesta; no se insertó nada.")
 
     gdf = gdf.rename_geometry("geom")
     if "id" in gdf.columns:
         gdf = gdf.drop(columns=["id"])
 
-    error_tipos = _validar_tipos_geometria(gdf, args.tabla)
-    if error_tipos:
-        print(error_tipos)
-        return 1
+    if (error_tipos := _validar_tipos_geometria(gdf, args.tabla)):
+        return _abortar(error_tipos)
 
-    error_rangos = _validar_rangos_coords(gdf)
-    if error_rangos:
-        print(error_rangos)
-        return 1
+    if (error_rangos := _validar_rangos_coords(gdf)):
+        return _abortar(error_rangos)
 
     if args.tabla in ("mapa_color", "zonas_exclusion"):
-        error_titularidad = _validar_titularidad(gdf, args.tabla)
-        if error_titularidad:
-            print(error_titularidad)
-            return 1
+        if (error_titularidad := _validar_titularidad(gdf, args.tabla)):
+            return _abortar(error_titularidad)
 
     if args.tabla == "mapa_color":
-        error_exclusiones = _validar_exclusiones_mapa(gdf)
-        if error_exclusiones:
-            print(error_exclusiones)
-            return 1
+        if (error_exclusiones := _validar_exclusiones_mapa(gdf)):
+            return _abortar(error_exclusiones)
 
     if args.tabla == "zonas_exclusion":
         try:
@@ -544,10 +519,8 @@ def principal():
             print(f"[!] No se pudo verificar solape con mapa_color: {e}")
 
     if args.tabla == "potreros_base":
-        error_unicos = _validar_potreros_unicos(gdf)
-        if error_unicos:
-            print(error_unicos)
-            return 1
+        if (error_unicos := _validar_potreros_unicos(gdf)):
+            return _abortar(error_unicos)
 
     print(f"[*] Intentando inyectar {len(gdf)} filas a la tabla '{args.tabla}'...")
     try:
@@ -555,8 +528,7 @@ def principal():
             gdf.to_postgis(args.tabla, conn, if_exists="append", index=False, chunksize=1000)
         print("[+] ¡Ingesta completada con éxito!")
     except Exception as e:
-        print(f"[X] La base de datos rechazó los datos. Verificá tipos y restricciones:\n{e}")
-        return 1
+        return _abortar(f"[X] La base de datos rechazó los datos. Verificá tipos y restricciones:\n{e}")
 
     # Celdas precalculadas del mapa (mapa_celdas): el mapa de masa seca lee
     # esas geometrías ya recortadas en vez de construirlas por tile (~9s).

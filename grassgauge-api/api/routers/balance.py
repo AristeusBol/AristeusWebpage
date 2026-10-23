@@ -4,18 +4,15 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 
-from api.routers.parcelas import _zonales_finca
-from api.routers.potreros import _prorrateo
-from api.routers.rodeos import _consumo_diario
 from core.db import engine
 from core.seguridad import get_current_user_id
+from dominio.constantes import UMBRAL_ATENTO, UMBRAL_URGENTE, UTILIZACION_VALIDA
+from dominio.stock import consumo_diario as _consumo_diario, prorrateo as _prorrateo
 from repositorios import parcelas as repo_parcelas
+from repositorios.parcelas import zonales_finca as _zonales_finca
 
 router = APIRouter(prefix="/api/balance", tags=["balance"])
 
-UMBRAL_URGENTE = 7.0
-UMBRAL_ATENTO = 21.0
-UTILIZACION_VALIDA = {40, 50, 60}
 _RANK = {"urgente": 0, "atento": 1, "ok": 2, "sin_dato": 3, "libre": 4}
 
 
@@ -152,7 +149,6 @@ def get_balance(
             t_ha = z.get("t_ha_total")
             tiene_calculo = bool(z.get("tiene_calculo"))
             estimado = False
-            zonal = True
         else:
             pr = _prorrateo(float(r.area_ha) if r.area_ha is not None else None, calcs.get(int(r.potrero_id)))
             masa_total = pr.get("masa_total_kg")
