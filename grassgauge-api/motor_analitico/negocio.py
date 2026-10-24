@@ -2,29 +2,23 @@ from sqlalchemy import text
 import math
 import pandas as pd
 
-M2_POR_HA = 10000
-G_POR_KG = 1000
+from dominio.constantes import G_POR_KG, M2_POR_HA
+from repositorios.sql import EXCLUIR_PUNTOS_PID
 
 
 def calcular_stock_potrero(engine, potrero_id, usuario_id=None, fecha=None):
     with engine.connect() as conn:
+        sql = "SELECT nombre, finca, ST_Area(geom::geography) AS area_m2, usuario_id FROM potreros_base WHERE id = :pid"
+        params: dict = {"pid": potrero_id}
         if usuario_id is not None:
-            res = conn.execute(
-                text("SELECT nombre, finca, ST_Area(geom::geography) AS area_m2, usuario_id FROM potreros_base WHERE id = :pid AND usuario_id = :uid"),
-                {"pid": potrero_id, "uid": usuario_id},
-            ).fetchone()
-            if not res:
-                return None
-            nombre, finca, area_bruta_m2 = res.nombre, res.finca, float(res.area_m2) if res.area_m2 is not None else 0.0
-        else:
-            res = conn.execute(
-                text("SELECT nombre, finca, ST_Area(geom::geography) AS area_m2, usuario_id FROM potreros_base WHERE id = :pid"),
-                {"pid": potrero_id},
-            ).fetchone()
-            if not res:
-                return None
-            nombre, finca, area_bruta_m2 = res.nombre, res.finca, float(res.area_m2) if res.area_m2 is not None else 0.0
-            usuario_id = res.usuario_id
+            sql += " AND usuario_id = :uid"
+            params["uid"] = usuario_id
+        res = conn.execute(text(sql), params).fetchone()
+        if not res:
+            return None
+        nombre, finca = res.nombre, res.finca
+        area_bruta_m2 = float(res.area_m2) if res.area_m2 is not None else 0.0
+        usuario_id = res.usuario_id
 
         area_bruta_ha = area_bruta_m2 / M2_POR_HA
 
@@ -70,13 +64,12 @@ def calcular_stock_potrero(engine, potrero_id, usuario_id=None, fecha=None):
             return None
 
         df_puntos = pd.read_sql(
-            text("""
+            text(f"""
                 SELECT fecha, densidad_verde_g_m2, densidad_muerta_g_m2, densidad_total_g_m2
                 FROM mapa_color m
                 WHERE m.potrero_id = :pid AND m.usuario_id = :uid
                   AND ST_Covers((SELECT geom FROM potreros_base WHERE id = :pid AND usuario_id = :uid), m.geom)
-                  AND NOT EXISTS (SELECT 1 FROM zonas_exclusion z
-                    WHERE z.potrero_id = :pid AND z.usuario_id = :uid AND ST_Covers(z.geom, m.geom))
+                  AND {EXCLUIR_PUNTOS_PID}
                   AND m.fecha = :fecha
             """),
             conn,
@@ -95,13 +88,9 @@ def calcular_stock_potrero(engine, potrero_id, usuario_id=None, fecha=None):
     total_mean = float(df_puntos["densidad_total_g_m2"].dropna().mean())
     if any(math.isnan(v) or math.isinf(v) for v in (verde_mean, muerta_mean, total_mean)):
         return None
-    densidad_promedio_verde_g_m2 = verde_mean
-    densidad_promedio_muerta_g_m2 = muerta_mean
-    densidad_promedio_total_g_m2 = total_mean
-
-    masa_total_potrero_verde_kg = densidad_promedio_verde_g_m2 * area_neta_m2 / G_POR_KG
-    masa_total_potrero_muerta_kg = densidad_promedio_muerta_g_m2 * area_neta_m2 / G_POR_KG
-    masa_total_potrero_total_kg = densidad_promedio_total_g_m2 * area_neta_m2 / G_POR_KG
+    masa_total_potrero_verde_kg = verde_mean * area_neta_m2 / G_POR_KG
+    masa_total_potrero_muerta_kg = muerta_mean * area_neta_m2 / G_POR_KG
+    masa_total_potrero_total_kg = total_mean * area_neta_m2 / G_POR_KG
     if any(not math.isfinite(v) for v in (
         masa_total_potrero_verde_kg, masa_total_potrero_muerta_kg, masa_total_potrero_total_kg,
     )):
@@ -118,9 +107,9 @@ def calcular_stock_potrero(engine, potrero_id, usuario_id=None, fecha=None):
         "area_exclusion_ha": float(area_exclusion_ha),
         "area_neta_ha": float(area_neta_ha),
         "area_neta_m2": float(area_neta_m2),
-        "densidad_promedio_verde_g_m2": densidad_promedio_verde_g_m2,
-        "densidad_promedio_muerta_g_m2": densidad_promedio_muerta_g_m2,
-        "densidad_promedio_total_g_m2": densidad_promedio_total_g_m2,
+        "densidad_promedio_verde_g_m2": verde_mean,
+        "densidad_promedio_muerta_g_m2": muerta_mean,
+        "densidad_promedio_total_g_m2": total_mean,
         "masa_total_potrero_verde_kg": masa_total_potrero_verde_kg,
         "masa_total_potrero_muerta_kg": masa_total_potrero_muerta_kg,
         "masa_total_potrero_total_kg": masa_total_potrero_total_kg,

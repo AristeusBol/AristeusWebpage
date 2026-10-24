@@ -33,7 +33,7 @@ def test_potreros_lista_ok():
         MagicMock(id=1, nombre="Lote a1", finca="Finca Don Carlos"),
         MagicMock(id=2, nombre="Lote a2", finca="Finca Don Carlos"),
     ])
-    with patch("api.routers.calibracion.engine", eng):
+    with patch("api.routers.potreros.engine", eng):
         resp = client.get("/api/potreros", headers=auth_headers(1))
     assert resp.status_code == 200
     data = resp.json()
@@ -45,8 +45,8 @@ def test_potrero_detalle_404():
     mock_conn = MagicMock()
     eng = MagicMock()
     eng.connect.return_value.__enter__.return_value = mock_conn
-    with patch("api.routers.calibracion.engine", eng):
-        with patch("api.routers.calibracion.repo_potreros.potrero_y_exclusiones_geojson", return_value=None):
+    with patch("api.routers.potreros.engine", eng):
+        with patch("api.routers.potreros.repo_potreros.potrero_y_exclusiones_geojson", return_value=None):
             resp = client.get("/api/potreros/999", headers=auth_headers(1))
     assert resp.status_code == 404
 

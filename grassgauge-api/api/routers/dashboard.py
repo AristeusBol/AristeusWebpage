@@ -1,4 +1,3 @@
-from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -6,6 +5,7 @@ from sqlalchemy import text
 
 from core.db import engine
 from core.seguridad import get_current_user_id
+from dominio.stock import zonal_row_to_dict
 from repositorios import parcelas as repo_parcelas
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
@@ -41,23 +41,18 @@ def get_serie_temporal(
             rows = repo_parcelas.serie_zonal_parcela(conn, parcela_id, usuario_id_resuelto)
             puntos = []
             for r in rows:
-                area = float(r.area_ha) if r.area_ha is not None else None
-                if not r.n or area is None or area <= 0:
+                z = zonal_row_to_dict(r.n, r.vmean, r.mmean, r.tmean, r.area_ha,
+                                      incluir_estimado=False)
+                if not z["tiene_calculo"]:
                     continue
-                if r.vmean is None or r.mmean is None or r.tmean is None:
-                    continue
-                area_m2 = area * 10000.0
-                verde = float(r.vmean) * area_m2 / 1000.0
-                muerta = float(r.mmean) * area_m2 / 1000.0
-                total = float(r.tmean) * area_m2 / 1000.0
                 puntos.append({
                     "fecha": r.fecha.isoformat() if hasattr(r.fecha, "isoformat") else str(r.fecha),
-                    "area_ha": area,
-                    "verde_kg": verde,
-                    "muerta_kg": muerta,
-                    "total_kg": total,
-                    "t_ha": (total / 1000.0 / area) if area > 0 else None,
-                    "potreros": int(r.n),
+                    "area_ha": z["area_ha"],
+                    "verde_kg": z["masa_verde_kg"],
+                    "muerta_kg": z["masa_muerta_kg"],
+                    "total_kg": z["masa_total_kg"],
+                    "t_ha": z["t_ha_total"],
+                    "potreros": z["n_puntos"],
                 })
             return {
                 "filtros": {
@@ -68,6 +63,8 @@ def get_serie_temporal(
                 },
                 "puntos": puntos,
             }
+        filtro_potrero = ""
+        params = {"uid": usuario_id_resuelto, "finca": finca_norm}
         if potrero_id is not None:
             dueno = conn.execute(
                 text("SELECT 1 FROM potreros_base WHERE id = :pid AND usuario_id = :uid"),
@@ -75,24 +72,10 @@ def get_serie_temporal(
             ).fetchone()
             if not dueno:
                 raise HTTPException(status_code=404, detail=f"Potrero {potrero_id} no existe o no es tuyo")
-            sql = text("""
-                SELECT fecha,
-                        COALESCE(SUM(area_neta_ha), 0)    AS area,
-                        COALESCE(SUM(masa_seca_verde), 0) AS verde,
-                        COALESCE(SUM(masa_seca_muerta), 0) AS muerta,
-                        COALESCE(SUM(masa_seca_total), 0) AS total,
-                        COUNT(*) AS n
-                FROM calculos_stock
-                WHERE usuario_id = :uid
-                  AND finca = :finca
-                  AND potrero_id = :pid
-                GROUP BY fecha
-                ORDER BY fecha ASC
-            """)
-            params = {"uid": usuario_id_resuelto, "finca": finca_norm, "pid": potrero_id}
-            rows = conn.execute(sql, params).fetchall()
-        else:
-            sql = text("""
+            filtro_potrero = " AND potrero_id = :pid"
+            params["pid"] = potrero_id
+        rows = conn.execute(
+            text(f"""
                 SELECT fecha,
                        COALESCE(SUM(area_neta_ha), 0)    AS area,
                        COALESCE(SUM(masa_seca_verde), 0) AS verde,
@@ -101,12 +84,12 @@ def get_serie_temporal(
                        COUNT(*) AS n
                 FROM calculos_stock
                 WHERE usuario_id = :uid
-                  AND finca = :finca
+                  AND finca = :finca{filtro_potrero}
                 GROUP BY fecha
                 ORDER BY fecha ASC
-            """)
-            params = {"uid": usuario_id_resuelto, "finca": finca_norm}
-            rows = conn.execute(sql, params).fetchall()
+            """),
+            params,
+        ).fetchall()
 
     puntos = []
     for r in rows:

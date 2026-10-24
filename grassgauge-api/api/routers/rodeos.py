@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
@@ -7,18 +5,9 @@ from sqlalchemy.exc import IntegrityError
 from api.schemas import CATEGORIAS_RODEO, RodeoCreate, RodeoUpdate
 from core.db import engine
 from core.seguridad import get_current_user_id
+from dominio.stock import consumo_diario as _consumo_diario
 
 router = APIRouter(prefix="/api/rodeos", tags=["rodeos"])
-
-
-def _consumo_diario(cabezas, peso_prom_kg, consumo_pct) -> Optional[float]:
-    """kg MS/día que consume el rodeo: cabezas × peso × %/100."""
-    try:
-        if cabezas is None or peso_prom_kg is None or consumo_pct is None:
-            return None
-        return round(int(cabezas) * float(peso_prom_kg) * float(consumo_pct) / 100.0, 1)
-    except (TypeError, ValueError):
-        return None
 
 
 def _fila(r) -> dict:

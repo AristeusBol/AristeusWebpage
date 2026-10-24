@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 
 from api.main import app
-from api.routers.potreros import _prorrateo
+from dominio.stock import prorrateo as _prorrateo
 from tests.conftest import auth_headers
 
 client = TestClient(app)

@@ -17,7 +17,9 @@ DATABASE_URL = os.environ.get(
     f"postgresql://{PG_USER}:{quote_plus(PG_PASSWORD)}@{PG_HOST}:{PG_PORT}/{PG_DB}",
 )
 
-DATOS_DIR = Path(__file__).resolve().parents[1] / "datos"
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+DATOS_DIR = _REPO_ROOT / "datos"
+UPLOAD_DIR = Path(os.environ.get("UPLOAD_DIR", _REPO_ROOT / "uploads"))
 
 CORS_ORIGINS = [o.strip() for o in os.environ.get("CORS_ORIGINS", "*").split(",") if o.strip()]
 

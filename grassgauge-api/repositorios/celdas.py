@@ -33,6 +33,9 @@ from typing import Optional
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
+from dominio.constantes import MEDIO_LADO_M as _MEDIO_LADO_M
+from repositorios.sql import EXCLUIR_CELDAS_MC
+
 # ---------------------------------------------------------------------------
 # Esquema
 # ---------------------------------------------------------------------------
@@ -121,12 +124,7 @@ _SQL_PRECALCULAR = """
         WHERE mc.usuario_id = :uid
           AND mc.finca = :finca
           AND {cond_fecha}
-          AND NOT EXISTS (
-                SELECT 1 FROM zonas_exclusion z
-                WHERE z.usuario_id = mc.usuario_id
-                  AND z.potrero_id = mc.potrero_id
-                  AND ST_Covers(z.geom, mc.geom)
-              )
+          AND {excluir}
         ORDER BY ST_X(mc.geom), ST_Y(mc.geom), mc.potrero_id, mc.id
     ),
     lotes AS MATERIALIZED (
@@ -176,20 +174,18 @@ _SQL_PRECALCULAR = """
       AND ST_GeometryType(geom) IN ('ST_Polygon', 'ST_MultiPolygon')
 """
 
-_MEDIO_LADO_M = 8  # media celda (16x16m) sobre grilla de ~10.4m — igual al tile query
 
-
-def _cond_fecha(params: dict, fecha: Optional[date]) -> str:
-    """Cláusula opcional de fecha.
-
-    Se arma en Python en vez de `(:f IS NULL OR fecha = :f)`: psycopg/PG no
-    saben inferir el tipo de un parámetro que se compara contra NULL y tira
-    "could not determine data type of parameter".
-    """
-    if fecha is None:
-        return ""
-    params["fecha"] = fecha
-    return " AND fecha = :fecha"
+def _borrar_grupo(conn: Connection, tabla: str, uid: int, finca: str,
+                  fecha: Optional[date] = None) -> None:
+    params: dict = {"uid": uid, "finca": finca}
+    cond = ""
+    if fecha is not None:
+        params["fecha"] = fecha
+        cond = " AND fecha = :fecha"
+    conn.execute(
+        text(f"DELETE FROM {tabla} WHERE usuario_id = :uid AND finca = :finca{cond}"),
+        params,
+    )
 
 
 def precalcular_grupo(conn: Connection, uid: int, finca: str, fecha: Optional[date] = None) -> int:
@@ -199,8 +195,6 @@ def precalcular_grupo(conn: Connection, uid: int, finca: str, fecha: Optional[da
     potreros: si cambió una exclusión puede ganar otro punto del borde) y
     reinserta. Devuelve la cantidad de celdas generadas.
     """
-    params: dict = {"uid": uid, "finca": finca}
-    cond = _cond_fecha(params, fecha)
     # El motor pone statement_timeout=30s (para no colgar los tiles); acá no
     # aplica: generar ~209k celdas clippeadas tarda ~10-40s por fecha.
     # SET LOCAL vive solo en esta transacción (los llamadores usan engine.begin()).
@@ -208,19 +202,15 @@ def precalcular_grupo(conn: Connection, uid: int, finca: str, fecha: Optional[da
         conn.execute(text("SET LOCAL statement_timeout = '600s'"))
     except Exception:  # noqa: BLE001 - sin transacción queda solo un warning de PG
         pass
-    conn.execute(
-        text(f"""
-            DELETE FROM mapa_celdas
-            WHERE usuario_id = :uid AND finca = :finca{cond}
-        """),
-        params,
-    )
+    _borrar_grupo(conn, "mapa_celdas", uid, finca, fecha)
     params: dict = {"uid": uid, "finca": finca, "medio_lado": _MEDIO_LADO_M}
     if fecha is not None:
         params["fecha"] = fecha
     # Condición de fecha armada en Python (psycopg no infiere tipos de
     # parámetros comparados contra NULL; ver _cond_fecha).
-    sql = _SQL_PRECALCULAR.replace("{cond_fecha}", "mc.fecha = :fecha" if fecha is not None else "TRUE")
+    sql = (_SQL_PRECALCULAR
+           .replace("{cond_fecha}", "mc.fecha = :fecha" if fecha is not None else "TRUE")
+           .replace("{excluir}", EXCLUIR_CELDAS_MC))
     res = conn.execute(text(sql), params)
     return int(res.rowcount or 0)
 
@@ -243,9 +233,9 @@ def leer_tile_cache(conn: Connection, uid: int, finca: str, fecha: date,
     ).fetchone()
     if row is None:
         return None
-    mvt = row[0]
-    if mvt is None:
+    if row[0] is None:
         return b""
+    mvt = row[0]
     return bytes(mvt) if not isinstance(mvt, bytes) else mvt
 
 
@@ -272,8 +262,7 @@ def _clave_lock_tile(uid: int, finca: str, fecha: date, tipo: str,
     psycopg manda como `numeric` y PG rechaza (no hay pg_advisory_lock(numeric)).
     """
     crudo = f"{uid}|{finca}|{fecha.isoformat()}|{tipo}|{z}|{x}|{y}"
-    return int.from_bytes(hashlib.blake2b(crudo.encode(), digest_size=8).digest(),
-                          "big", signed=True)
+    return int.from_bytes(hashlib.blake2b(crudo.encode(), digest_size=8).digest(), "big", signed=True)
 
 
 def tomar_lock_tile(conn: Connection, uid: int, finca: str, fecha: date, tipo: str,
@@ -284,32 +273,18 @@ def tomar_lock_tile(conn: Connection, uid: int, finca: str, fecha: date, tipo: s
     (~1.4s el pico del z13 grande). OJO: hay que soltarlo con `soltar_lock_tile`
     o al cerrar la conexión (los advisory locks son por sesión).
     """
-    conn.execute(
-        text("SELECT pg_advisory_lock(:k)"),
-        {"k": _clave_lock_tile(uid, finca, fecha, tipo, z, x, y)},
-    )
+    conn.execute(text("SELECT pg_advisory_lock(:k)"), {"k": _clave_lock_tile(uid, finca, fecha, tipo, z, x, y)})
 
 
 def soltar_lock_tile(conn: Connection, uid: int, finca: str, fecha: date, tipo: str,
                      z: int, x: int, y: int) -> None:
-    conn.execute(
-        text("SELECT pg_advisory_unlock(:k)"),
-        {"k": _clave_lock_tile(uid, finca, fecha, tipo, z, x, y)},
-    )
+    conn.execute(text("SELECT pg_advisory_unlock(:k)"), {"k": _clave_lock_tile(uid, finca, fecha, tipo, z, x, y)})
 
 
 def invalidar_cache_tiles(conn: Connection, uid: int, finca: str,
                           fecha: Optional[date] = None) -> None:
     """Tras re-ingerir datos: sin tiles cacheados de ese grupo (cualquier zoom/tipo)."""
-    params: dict = {"uid": uid, "finca": finca}
-    cond = _cond_fecha(params, fecha)
-    conn.execute(
-        text(f"""
-            DELETE FROM mapa_tiles_cache
-            WHERE usuario_id = :uid AND finca = :finca{cond}
-        """),
-        params,
-    )
+    _borrar_grupo(conn, "mapa_tiles_cache", uid, finca, fecha)
 
 
 def podar_cache_tiles(conn: Connection, dias: int = 7) -> int:
@@ -336,12 +311,4 @@ def celdas_disponibles(conn: Connection, uid: int, finca: str, fecha: date) -> b
 
 def limpiar_celdas(conn: Connection, uid: int, finca: str, fecha: Optional[date] = None) -> None:
     """Fuerza el fallback al query viejo (p. ej. si el precalculo falló a medio camino)."""
-    params: dict = {"uid": uid, "finca": finca}
-    cond = _cond_fecha(params, fecha)
-    conn.execute(
-        text(f"""
-            DELETE FROM mapa_celdas
-            WHERE usuario_id = :uid AND finca = :finca{cond}
-        """),
-        params,
-    )
+    _borrar_grupo(conn, "mapa_celdas", uid, finca, fecha)

@@ -6,7 +6,8 @@ from fastapi.testclient import TestClient
 from jose import jwt
 
 from api.main import app
-from api.routers import mapa as mapa_router
+from servicios.mapa_tiles import _disp, _lru
+from servicios.mapa_warmup import _calentado_hasta
 from tests.conftest import auth_headers
 from core.config import ALGORITHM, SECRET_KEY
 
@@ -17,13 +18,13 @@ client = TestClient(app)
 def _limpiar_caches_mapa():
     """El endpoint cachea en proceso (LRU de tiles y disponibilidad de
     celdas): sin limpiarlo, la respuesta de un test se filtra al siguiente."""
-    mapa_router._lru.clear()
-    mapa_router._disp.clear()
-    mapa_router._calentado_hasta.clear()
+    _lru.clear()
+    _disp.clear()
+    _calentado_hasta.clear()
     yield
-    mapa_router._lru.clear()
-    mapa_router._disp.clear()
-    mapa_router._calentado_hasta.clear()
+    _lru.clear()
+    _disp.clear()
+    _calentado_hasta.clear()
 
 
 def _mock_mvt_engine(mvt_bytes):
@@ -60,7 +61,7 @@ def _mock_mvt_engine_celdas(mvt_bytes, hay_celdas: bool):
     mirando el SQL ejecutado se distingue qué camino tomó cada test.
     """
     eng, conn = _mock_mvt_engine(mvt_bytes)
-    return eng, conn, patch("api.routers.mapa.repo_celdas.celdas_disponibles", return_value=hay_celdas)
+    return eng, conn, patch("servicios.mapa_tiles.repo_celdas.celdas_disponibles", return_value=hay_celdas)
 
 
 def _sql_mvt(conn) -> str:
@@ -85,7 +86,7 @@ def _params_mvt(conn) -> dict:
 
 def test_mapa_tile_ok():
     eng, conn, parche = _mock_mvt_engine_celdas(b"\x1a\x05densidad", hay_celdas=True)
-    with patch("api.routers.mapa.engine", eng), parche:
+    with patch("servicios.mapa_tiles.engine", eng), patch("servicios.mapa_warmup.engine", eng), parche:
         resp = client.get("/api/mapa/tiles/10/500/500.pbf?finca=La%20Esperanza&fecha=2024-04-01&tipo_densidad=verde", headers=auth_headers(1))
     assert resp.status_code == 200
     assert resp.headers["content-type"] == "application/x-protobuf"
@@ -107,7 +108,7 @@ def test_mapa_tile_ok():
 def test_mapa_tile_sin_celdas_usa_legacy():
     """Sin celdas precalculadas (grupo viejo) cae al query que las arma."""
     eng, conn, parche = _mock_mvt_engine_celdas(b"tile", hay_celdas=False)
-    with patch("api.routers.mapa.engine", eng), parche:
+    with patch("servicios.mapa_tiles.engine", eng), patch("servicios.mapa_warmup.engine", eng), parche:
         resp = client.get("/api/mapa/tiles/10/500/500.pbf?finca=Vieja&fecha=2024-04-01&tipo_densidad=total", headers=auth_headers(1))
     assert resp.status_code == 200
     sql = _sql_mvt(conn)
@@ -119,7 +120,7 @@ def test_mapa_tile_sin_celdas_usa_legacy():
 def test_mapa_tile_recorta_exclusiones():
     """El query legacy (fallback) debe excluir puntos en exclusión y recortar."""
     eng, conn, parche = _mock_mvt_engine_celdas(b"tile", hay_celdas=False)
-    with patch("api.routers.mapa.engine", eng), parche:
+    with patch("servicios.mapa_tiles.engine", eng), patch("servicios.mapa_warmup.engine", eng), parche:
         resp = client.get("/api/mapa/tiles/10/500/500.pbf?finca=F&fecha=2024-04-01&tipo_densidad=total", headers=auth_headers(1))
     assert resp.status_code == 200
     sql = _sql_mvt(conn)
@@ -133,7 +134,7 @@ def test_mapa_histograma_excluye_exclusion():
     """Histograma no debe contar puntos dentro de exclusiones."""
     from tests.test_histograma import _mock_hist_engine
     eng, conn = _mock_hist_engine([10.0, 20.0], dueno=None)
-    with patch("api.routers.mapa.engine", eng):
+    with patch("servicios.histograma.engine", eng):
         client.get("/api/mapa/histograma?finca=F&fecha=2024-04-01&bins=5", headers=auth_headers(1))
     for call in conn.execute.call_args_list:
         sql = str(call[0][0])
@@ -145,7 +146,7 @@ def test_mapa_histograma_excluye_exclusion():
 def test_mapa_tile_tipos_densidad_whitelist():
     for tipo, columna in [("verde", "densidad_verde_g_m2"), ("muerta", "densidad_muerta_g_m2"), ("total", "densidad_total_g_m2")]:
         eng, conn, parche = _mock_mvt_engine_celdas(b"tile", hay_celdas=True)
-        with patch("api.routers.mapa.engine", eng), parche:
+        with patch("servicios.mapa_tiles.engine", eng), patch("servicios.mapa_warmup.engine", eng), parche:
             resp = client.get(f"/api/mapa/tiles/5/1/1.pbf?finca=F&fecha=2024-04-01&tipo_densidad={tipo}", headers=auth_headers(1))
         assert resp.status_code == 200
         assert columna in _sql_mvt(conn)
@@ -159,7 +160,7 @@ def test_mapa_tile_tipo_invalido_400():
 
 def test_mapa_tile_vacio_200_empty():
     eng, _ = _mock_mvt_engine(None)
-    with patch("api.routers.mapa.engine", eng):
+    with patch("servicios.mapa_tiles.engine", eng), patch("servicios.mapa_warmup.engine", eng):
         resp = client.get("/api/mapa/tiles/10/1/1.pbf?finca=Vacia&fecha=2024-04-01&tipo_densidad=total", headers=auth_headers(1))
     assert resp.status_code == 200
     assert resp.content == b""
@@ -168,7 +169,7 @@ def test_mapa_tile_vacio_200_empty():
 
 def test_mapa_tile_memoryview():
     eng, _ = _mock_mvt_engine(memoryview(b"tile-mem"))
-    with patch("api.routers.mapa.engine", eng):
+    with patch("servicios.mapa_tiles.engine", eng), patch("servicios.mapa_warmup.engine", eng):
         resp = client.get("/api/mapa/tiles/8/10/10.pbf?finca=F&fecha=2024-04-01&tipo_densidad=verde", headers=auth_headers(1))
     assert resp.content == b"tile-mem"
 
@@ -176,7 +177,7 @@ def test_mapa_tile_memoryview():
 def test_mapa_tile_con_jwt():
     eng, _ = _mock_mvt_engine(b"tile")
     token = jwt.encode({"sub": "99"}, SECRET_KEY, algorithm=ALGORITHM)
-    with patch("api.routers.mapa.engine", eng):
+    with patch("servicios.mapa_tiles.engine", eng), patch("servicios.mapa_warmup.engine", eng):
         resp = client.get("/api/mapa/tiles/8/10/10.pbf?finca=F&fecha=2024-04-01&tipo_densidad=verde", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200
 
@@ -188,7 +189,7 @@ def test_mapa_tile_sin_auth_401():
 
 def test_mapa_tile_sqli_protegido():
     eng, conn = _mock_mvt_engine(b"tile")
-    with patch("api.routers.mapa.engine", eng):
+    with patch("servicios.mapa_tiles.engine", eng), patch("servicios.mapa_warmup.engine", eng):
         client.get("/api/mapa/tiles/8/10/10.pbf?finca=F'; DROP TABLE--&fecha=2024-04-01&tipo_densidad=verde", headers=auth_headers(1))
     sql = _sql_mvt(conn)
     assert "DROP TABLE" not in sql
@@ -199,7 +200,7 @@ def test_mapa_tile_sqli_protegido():
 
 def test_precalentar_programa_y_no_bloquea():
     """El endpoint responde ya y deja el render para el thread de fondo."""
-    with patch("api.routers.mapa._precalentar_async") as pre:
+    with patch("api.routers.mapa.precalentar_async") as pre:
         resp = client.post(
             "/api/mapa/precalentar?finca=Aristeus&fecha=2026-09-14&tipo_densidad=total&z=14"
             "&min_lon=-61.10&min_lat=-16.02&max_lon=-60.98&max_lat=-15.94",

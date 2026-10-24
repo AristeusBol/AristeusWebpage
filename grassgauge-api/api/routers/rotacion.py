@@ -4,76 +4,39 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
-from api.routers.rodeos import _consumo_diario
-from api.schemas import CATEGORIAS_RODEO, AsignacionUpdate, FinalizarTrayectoria, SemanaCreate
+from api.schemas import AsignacionUpdate, FinalizarTrayectoria, SemanaCreate
 from core.db import engine
 from core.seguridad import get_current_user_id
+from repositorios import rotacion as repo_rot
+from repositorios.rotacion import FILAS_SQL as _FILAS_SQL
+from servicios.rotacion import (
+    consolidar_dias as _consolidar_dias,
+    construir_trayectoria,
+    fila_asignacion as _fila,
+    vigente_hoy as _vigente_hoy,
+)
 
 router = APIRouter(prefix="/api/rotacion", tags=["rotacion"])
 
-_FILAS_SQL = """
-    SELECT a.id AS asignacion_id, a.fecha_entrada, a.fecha_salida, a.notas,
-           a.trayectoria_inicio,
-           r.id AS rodeo_id, r.nombre AS rodeo, r.categoria,
-           r.cabezas, r.peso_prom_kg, r.consumo_pct,
-           p.id AS parcela_id, p.nombre AS parcela, p.estado,
-           pt.id AS potrero_id, pt.nombre AS potrero, pt.finca
-    FROM asignaciones a
-    JOIN rodeos r ON r.id = a.rodeo_id AND r.usuario_id = :uid
-    JOIN parcelas p ON p.id = a.parcela_id AND p.usuario_id = :uid
-    JOIN potreros_base pt ON pt.id = p.potrero_id AND pt.usuario_id = :uid
-    WHERE a.usuario_id = :uid
-"""
 
-
-def _fila(r) -> dict:
-    return {
-        "id": r.asignacion_id,
-        "rodeo_id": int(r.rodeo_id),
-        "rodeo": r.rodeo,
-        "categoria": r.categoria,
-        "categoria_label": CATEGORIAS_RODEO.get(r.categoria, {}).get("label", r.categoria),
-        "cabezas": int(r.cabezas),
-        "peso_prom_kg": float(r.peso_prom_kg),
-        "consumo_pct": float(r.consumo_pct),
-        "consumo_diario_ms_kg": _consumo_diario(r.cabezas, r.peso_prom_kg, r.consumo_pct),
-        "parcela_id": int(r.parcela_id),
-        "parcela": r.parcela,
-        "estado_parcela": r.estado,
-        "potrero_id": int(r.potrero_id),
-        "potrero": r.potrero,
-        "finca": r.finca,
-        "fecha_entrada": r.fecha_entrada.isoformat(),
-        "fecha_salida": r.fecha_salida.isoformat() if r.fecha_salida else None,
-        "notas": r.notas,
-    }
-
-
-def _vigente_hoy(row, hoy: date) -> bool:
-    return row.fecha_entrada <= hoy and (row.fecha_salida is None or row.fecha_salida >= hoy)
-
-
-def _consolidar_dias(dias, inicio: date):
-    """Convierte los 7 días (cada uno con su lista de parcelas) en tramos continuos.
-
-    Cada día puede tener varias parcelas: se comen en ese orden dentro del día.
-    Una misma parcela en días seguidos (sin otra en medio) se fusiona en un solo
-    stay [entrada, salida]. Devuelve lista de (parcela_id, fecha_entrada, fecha_salida).
-    """
-    pasos: list[tuple[int, date, date]] = []
-    for i, dia in enumerate(dias):
-        for pid in dia:
-            if pasos and pasos[-1][0] == pid:
-                ultimo_fin = (pasos[-1][2] - inicio).days
-                if i == ultimo_fin + 1:
-                    pasos[-1] = (pid, pasos[-1][1], inicio + timedelta(days=i))
-                elif i == ultimo_fin:
-                    continue  # misma parcela repetida el mismo día → ignorar
-                else:
-                    pasos.append((pid, inicio + timedelta(days=i), inicio + timedelta(days=i)))
-            else:
-                pasos.append((pid, inicio + timedelta(days=i), inicio + timedelta(days=i)))
-    return pasos
+def _borrar_trayectoria(conn, params: dict, clave: str = "inicio") -> int:
+    """Borra las asignaciones y la marca de finalizada de una trayectoria."""
+    filas = conn.execute(
+        text(f"""
+            DELETE FROM asignaciones
+            WHERE usuario_id = :uid AND rodeo_id = :rid AND trayectoria_inicio = :{clave}
+            RETURNING id
+        """),
+        params,
+    ).fetchall()
+    conn.execute(
+        text(f"""
+            DELETE FROM trayectorias_finalizadas
+            WHERE usuario_id = :uid AND rodeo_id = :rid AND trayectoria_inicio = :{clave}
+        """),
+        params,
+    )
+    return len(filas)
 
 
 @router.get("")
@@ -109,82 +72,10 @@ def trayectoria_rotacion(uid: int = Depends(get_current_user_id)):
     historial (Rotaciones finalizadas)."""
     hoy = date.today()
     with engine.connect() as conn:
-        rows = conn.execute(
-            text(_FILAS_SQL + " ORDER BY r.id ASC, a.fecha_entrada ASC, a.id ASC"),
-            {"uid": uid},
-        ).fetchall()
-        lotes = conn.execute(
-            text("""
-                SELECT id, nombre, color, cabezas, peso_prom_kg, consumo_pct
-                FROM rodeos WHERE usuario_id = :uid
-                ORDER BY nombre ASC
-            """),
-            {"uid": uid},
-        ).fetchall()
-        fin = conn.execute(
-            text("""
-                SELECT rodeo_id, trayectoria_inicio, finalizada_en
-                FROM trayectorias_finalizadas WHERE usuario_id = :uid
-            """),
-            {"uid": uid},
-        ).fetchall()
-    marcadas: dict[tuple[int, date], object] = {
-        (int(f.rodeo_id), f.trayectoria_inicio): f.finalizada_en for f in fin
-    }
-    por_rodeo: dict[int, list] = {}
-    for r in rows:
-        por_rodeo.setdefault(int(r.rodeo_id), []).append(r)
-
-    trayectoria = []
-    for lote in lotes:
-        by_grupo: dict[date, list] = {}
-        for r in por_rodeo.get(int(lote.id), []):
-            entrada = r.fecha_entrada
-            salida = r.fecha_salida
-            if salida is not None and salida < hoy:
-                estado_etapa = "cerrada"
-            elif entrada <= hoy and (salida is None or salida >= hoy):
-                estado_etapa = "vigente"
-            else:
-                estado_etapa = "programada"
-            fila = _fila(r)
-            fila["trayectoria_inicio"] = r.trayectoria_inicio
-            fila["estado_etapa"] = estado_etapa
-            fila["dias_planificados"] = (salida - entrada).days + 1 if salida else None
-            fila["dias_transcurridos"] = (hoy - entrada).days + 1 if entrada <= hoy else None
-            by_grupo.setdefault(r.trayectoria_inicio, []).append(fila)
-
-        trayectorias: list[dict] = []
-        for inicio, etapas in by_grupo.items():
-            trayectorias.append(_trayectoria_bloque(inicio, etapas))
-        for t in trayectorias:
-            t["finalizada"] = False
-            t["finalizada_en"] = None
-            marca = marcadas.get((int(lote.id), date.fromisoformat(t["inicio"])))
-            if marca is not None:
-                t["finalizada"] = True
-                t["finalizada_en"] = marca.isoformat()
-        trayectorias.sort(key=lambda t: t["inicio"], reverse=True)
-        trayectoria.append({
-            "rodeo_id": int(lote.id),
-            "rodeo": lote.nombre,
-            "color": lote.color,
-            "cabezas": int(lote.cabezas),
-            "peso_prom_kg": float(lote.peso_prom_kg),
-            "consumo_pct": float(lote.consumo_pct),
-            "consumo_diario_ms_kg": _consumo_diario(lote.cabezas, lote.peso_prom_kg, lote.consumo_pct),
-            "trayectorias": trayectorias,
-        })
-    return {"trayectoria": trayectoria}
-
-
-def _trayectoria_bloque(inicio: date, etapas: list) -> dict:
-    """Bloque de una trayectoria: ventana de 7 días desde su inicio + etapas."""
-    return {
-        "inicio": inicio.isoformat(),
-        "dias": [(inicio + timedelta(days=i)).isoformat() for i in range(7)],
-        "etapas": etapas,
-    }
+        rows = repo_rot.listar_asignaciones(conn, uid, " ORDER BY r.id ASC, a.fecha_entrada ASC, a.id ASC")
+        lotes = repo_rot.listar_lotes(conn, uid)
+        fin = repo_rot.listar_finalizadas(conn, uid)
+    return construir_trayectoria(rows, lotes, fin, hoy)
 
 
 @router.post("/semana", status_code=200)
@@ -266,20 +157,10 @@ def armar_semana(body: SemanaCreate, uid: int = Depends(get_current_user_id)):
                         detail=f"Potreros ya usados por otro rodeo esa semana: {', '.join(sorted(choques))}",
                     )
             if body.reemplazar_inicio is not None:
-                conn.execute(
-                    text("""
-                        DELETE FROM asignaciones
-                        WHERE usuario_id = :uid AND rodeo_id = :rid
-                          AND trayectoria_inicio = :reemplazo
-                    """),
+                _borrar_trayectoria(
+                    conn,
                     {"uid": uid, "rid": body.rodeo_id, "reemplazo": body.reemplazar_inicio},
-                )
-                conn.execute(
-                    text("""
-                        DELETE FROM trayectorias_finalizadas
-                        WHERE usuario_id = :uid AND rodeo_id = :rid AND trayectoria_inicio = :reemplazo
-                    """),
-                    {"uid": uid, "rid": body.rodeo_id, "reemplazo": body.reemplazar_inicio},
+                    "reemplazo",
                 )
             pasos = _consolidar_dias(body.dias, body.inicio)
             for pid, entrada, salida in pasos:
@@ -352,23 +233,8 @@ def actualizar_asignacion(
 def eliminar_trayectoria(rodeo_id: int, inicio: date, uid: int = Depends(get_current_user_id)):
     """Borra una trayectoria completa de un lote (ventana de 7 días desde inicio)."""
     with engine.begin() as conn:
-        filas = conn.execute(
-            text("""
-                DELETE FROM asignaciones
-                WHERE usuario_id = :uid AND rodeo_id = :rid
-                  AND trayectoria_inicio = :inicio
-                RETURNING id
-            """),
-            {"uid": uid, "rid": rodeo_id, "inicio": inicio},
-        ).fetchall()
-        conn.execute(
-            text("""
-                DELETE FROM trayectorias_finalizadas
-                WHERE usuario_id = :uid AND rodeo_id = :rid AND trayectoria_inicio = :inicio
-            """),
-            {"uid": uid, "rid": rodeo_id, "inicio": inicio},
-        )
-    return {"inicio": inicio.isoformat(), "eliminado": True, "asignaciones": len(filas)}
+        borradas = _borrar_trayectoria(conn, {"uid": uid, "rid": rodeo_id, "inicio": inicio})
+    return {"inicio": inicio.isoformat(), "eliminado": True, "asignaciones": borradas}
 
 
 @router.post("/trayectoria/{rodeo_id}/{inicio}/finalizar")
