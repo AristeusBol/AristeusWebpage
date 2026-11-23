@@ -249,8 +249,12 @@ export default function GestionMapa({
       // La parcela está encima del potrero: si el clic cayó sobre una parcela,
       // el handler de parcelas ya seleccionó; no pisar con el potrero.
       try {
-        const sobreParcela = map!.queryRenderedFeatures(e.point, { layers: ['g-parcelas-fill'] });
-        if (sobreParcela.length > 0) return;
+        // Si todavía no se agregó la capa (o no hay parcelas), consultarla
+        // dispararía un evento 'error' de MapLibre en vez de una excepción.
+        if (map!.getLayer('g-parcelas-fill')) {
+          const sobreParcela = map!.queryRenderedFeatures(e.point, { layers: ['g-parcelas-fill'] });
+          if (sobreParcela.length > 0) return;
+        }
       } catch {
         /* capa aún no lista: seguir con potrero */
       }

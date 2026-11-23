@@ -419,7 +419,10 @@ export default function MapaMasaSeca({ features, selectedId, onSelect, finca, fe
     map.on('click', 'potreros-fill', (e) => {
       if (dibRef.current.dibujando) return;
       try {
-        if (mostrarParcRef.current) {
+        // La capa de parcelas solo existe cuando hay parcelas que dibujar.
+        // Consultarla sin ella hace que MapLibre dispare un evento 'error'
+        // (no lanza excepción) y el listener global muestre el overlay de error.
+        if (mostrarParcRef.current && (map as Map).getLayer('parcelas-fill')) {
           const sobre = (map as Map).queryRenderedFeatures(e.point, { layers: ['parcelas-fill'] });
           if (sobre.length > 0) return;
         }
