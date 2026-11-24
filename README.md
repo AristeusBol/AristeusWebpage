@@ -112,22 +112,3 @@ cd grassgauge-api
 python motor_analitico/precalcular_celdas.py                    # todos los grupos
 python motor_analitico/precalcular_celdas.py --fecha 2026-09-14 # una fecha
 ```
-
-- Si un (finca, fecha) queda sin celdas (p. ej. fallo al regenerar), el
-  endpoint cae solo al cálculo on-the-fly: más lento pero correcto.
-- Tras re-ingerir datos la caché de tiles se invalida sola para los grupos
-  tocados; en el navegador, Ctrl+Shift+R si querés ignorar la del cliente.
-- Si dos workers piden el mismo tile frío a la vez, un advisory lock de PG
-  hace que uno calcule y el otro espere y lea el resultado (antes lo hacían
-  los dos: era el pico de ~1.4s del z13 grande).
-
-Medido sobre Aristeus (12 fechas x ~209k puntos, 65 potreros), pidiendo los
-tiles de a 6 como el navegador:
-
-| Viewport | Antes | Primera vista | Repetida |
-| --- | --- | --- | --- |
-| z13, 12 tiles | 9.1s | ~1.1s | ~0.04s |
-| z14, 24 tiles | 5.7s | ~1.0s | ~0.07s |
-
-Con el precalentado proactivo la primera vista del z14 baja a **~0.17s**
-(desde ~0.64s sin avisar el viewport) y el pico por tile de ~0.5s a ~0.13s.
